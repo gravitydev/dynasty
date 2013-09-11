@@ -212,3 +212,4 @@ object `package` {
   def attr [T] (name: String)(implicit att: DynamoMapper[T]) = new Attribute [T](name) 
 
 }
+

@@ -12,7 +12,12 @@ object ApplicationBuild extends Build {
       libraryDependencies ++= Seq(
         "com.typesafe.akka"         %% "akka-actor"   % "2.1.0",
         "com.amazonaws"             % "aws-java-sdk" % "1.5.6",
-        "org.slf4j"                 % "slf4j-api"    % "1.7.2"
+        "org.slf4j"                 % "slf4j-api"    % "1.7.2",
+
+        // test
+        "org.scalatest" %%  "scalatest"             % "1.8"     % "test" cross CrossVersion.full,
+        "joda-time" % "joda-time" % "2.1" % "test",
+        "org.joda" % "joda-convert" % "1.1" % "test"
       ),
       offline := true,
       publishTo := Some(gravityRepo),
