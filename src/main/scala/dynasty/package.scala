@@ -1,15 +1,17 @@
 package com.gravitydev.dynasty
 
-import com.amazonaws.services.dynamodb.AmazonDynamoDBAsyncClient
-import com.amazonaws.services.dynamodb.model._
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient
+import com.amazonaws.services.dynamodbv2.model._
+import com.amazonaws.handlers.AsyncHandler
+import com.amazonaws.AmazonWebServiceRequest
 import scala.collection.JavaConversions._
 import java.nio.ByteBuffer
 import scala.concurrent.Future
 import org.slf4j.LoggerFactory
-import com.gravitydev.dynasty.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
 import akka.actor.ActorSystem
 import scala.language.implicitConversions
+import scala.concurrent.{future, promise, Future, Promise}
 
 class AssignmentProxy (val name: String, val put: Seq[AttributeValue], val set: AttributeValueUpdate)
 
@@ -55,6 +57,8 @@ class Attribute [T](val name: String)(implicit val mapper: DynamoMapper[T]) exte
   def exists (e: Boolean) = Seq(name -> new ExpectedAttributeValue().withExists(e))
   
   def value (v: T) = mapper.put(v) map (x => name -> new ExpectedAttributeValue().withValue(x))
+
+  def === (v: T) = new KeyValue(name, mapper.put(v).head)
 }
 
 class OptionalAttribute [T] (attr: Attribute[T]) extends AttributeParser[Option[T]] with AttributeSeq[Option[T]] {
@@ -73,12 +77,12 @@ sealed abstract class DynamoType [T](
   val setSet = {(v: AttributeValue, t: Set[T]) => _setSet(v,t); v}
 }
 
-sealed abstract class DynamoKey (val key: Key)
-final class HashKey [H] (key: Key) extends DynamoKey(key) {
-  override def toString = "HashKey(" + key.getHashKeyElement() + ")"
+sealed abstract class DynamoKey (val key: Map[String,AttributeValue])
+final class HashKey [H] (key: Map[String,AttributeValue]) extends DynamoKey(key) {
+  override def toString = "HashKey(" + key + ")"
 }
-final class HashAndRangeKey [H,R] (key: Key) extends DynamoKey(key) {
-  override def toString = "HashAndRangeKey(hash=" + key.getHashKeyElement() + ", range=" + key.getRangeKeyElement() + ")"
+final class HashAndRangeKey [H,R] (key: Map[String,AttributeValue]) extends DynamoKey(key) {
+  override def toString = "HashAndRangeKey(" + key + ", range=" + key + ")"
 }
 
 abstract class DynamoTable [K <: DynamoKey](val tableName: String)
@@ -87,6 +91,23 @@ object `package` {
   private type M = Map[String,AttributeValue]
   
   private val logger = LoggerFactory getLogger getClass
+
+  private [dynasty] def withAsyncHandler [R<:AmazonWebServiceRequest,T] (fn: AsyncHandler[R,T] => Unit): Future[T] = {
+    val p = promise[T]
+    fn {
+      new AsyncHandler [R,T] {
+        def onError (ex: Exception) = p failure ex
+        def onSuccess (r: R, x: T) = p success x
+      }
+    }
+    p.future
+  }
+
+  def handler [R<:AmazonWebServiceRequest,X](p: Promise[X]) = new AsyncHandler [R,X] {
+    def onError (ex: Exception) = p failure ex
+    def onSuccess (r: R, x: X) = p success x
+  }
+
   
   private [dynasty] def logging [T](tag: String)(f: Future[T]) = f //recover {case e => logger.error(tag + ": Request error", e); throw e}
   
@@ -107,8 +128,8 @@ object `package` {
     (table.tableName, key.map(_.key).toSeq, attributes(table).attributes map {_.name})
   }
   
-  def key [H](hash: H)(implicit hev: H => AttributeValue) = new HashKey[H](new Key().withHashKeyElement(hev(hash)))
-  def key [H,R](hash: H, range: R)(implicit hev: H => AttributeValue, rev: R => AttributeValue) = new HashAndRangeKey[H,R](new Key().withHashKeyElement(hev(hash)).withRangeKeyElement(rev(range)))
+  def key [H](hash: H)(implicit hev: H => (String,AttributeValue)) = new HashKey[H](Map(hev(hash)))
+  def key [H,R](hash: H, range: R)(implicit hev: H => (String,AttributeValue), rev: R => (String,AttributeValue)) = new HashAndRangeKey[H,R](Map(hev(hash), rev(range)))
 
   object NumberType extends DynamoType [String] (_.getN, _.getNS.toSet, _ setN _, _ setNS _)
   object StringType extends DynamoType [String] (_.getS, _.getSS.toSet, _ setS _, _ setSS _)

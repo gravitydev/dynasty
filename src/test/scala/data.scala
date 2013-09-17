@@ -19,7 +19,7 @@ object dynamo {
   )
   
   object tables {
-    object UserItem extends DynamoTable [HashKey[String]]("users") {
+    object UserItem extends DynamoTable [HashKey[String]] ("users") {
       val userId                  = attr[String]      ("user-id")
       val firstName               = attr[String]      ("first-name")
       val lastName                = attr[String]      ("last-name")
