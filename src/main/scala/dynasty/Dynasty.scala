@@ -3,6 +3,7 @@ package com.gravitydev.dynasty
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient
 import com.amazonaws.services.dynamodbv2.model._
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 import java.nio.ByteBuffer
 import scala.concurrent.Future
@@ -12,20 +13,12 @@ object Dynasty {
   def apply (client: AmazonDynamoDBAsyncClient, tablePrefix: String = "")(implicit ec: ExecutionContext) = new Dynasty(client, tablePrefix)
 }
 
-/**
- * Represents a list of items and attributes to be retrieved from *one* table
- * mostly for the purpose of batchGet
- */
-/*
-case class ItemQuery [K<:DynamoKey, T<:DynamoTable[K], V<:Any](table: T, keys: Set[K])(val attributesFn: T=>AttributeSeq[V]) {
-  def tableName = table.tableName
-  def dynamoKeys = keys.map(x => x.key: java.util.Map[String,AttributeValue])
-  def attributes = attributesFn(table)
-}
-*/
-
 class KeyValue (key: String, value: AttributeValue) {
   def toPair = key -> value
+  def toMap = Map(key -> value)
+}
+class KeyValues (key: String, values: Set[AttributeValue]) {
+  //def toMap = Map( 
 }
 
 class Dynasty (
@@ -35,31 +28,10 @@ class Dynasty (
   
   private val logger = LoggerFactory getLogger getClass
 
-  class GetQuery [V] (
-    val tableName: String,
-    val keys: Map[String,AttributeValue],
-    val selector: AttributeSeq[V]
-  )
-
-  class GetBuilder [K<:DynamoKey, T<:DynamoTable[K]](table: T with DynamoTable[K]) {
-    def where (hash: T => KeyValue) = new GetBuilder2(table, Map(hash(table).toPair))
-    def where (hash: T => KeyValue, range: T => KeyValue) = new GetBuilder2(table, Map(hash(table).toPair, range(table).toPair))
-  }
-
-  class GetBuilder2 [K<:DynamoKey, T<:DynamoTable[K]](table: T with DynamoTable[K], keys: Map[String,AttributeValue]) {
-    def select [V](attributes: T => AttributeSeq[V]): GetQuery[V] = new GetQuery (
-      tablePrefix + table.tableName,
-      keys,
-      attributes(table)
-    )  
-  }
-
-  def from [K<:DynamoKey, T<:DynamoTable[K]] (table: T with DynamoTable[K]) = new GetBuilder(table)
-
   def get [V](query: GetQuery[V]): Future[Option[V]] = {
     val req = new GetItemRequest()
       .withTableName(query.tableName)
-      .withKey(query.keys)
+      .withKey(query.key)
       .withAttributesToGet(query.selector.attributes map (_.name))
 
     logger.debug("GetItem: " + req)
@@ -78,14 +50,14 @@ class Dynasty (
   /**
    * @param request (tableName, Seq(keys), Seq(attributes))
    */
-  def batchGet [V](queries: GetQuery[V]*): Future[List[V]] = logging ("Batch getting: " + queries) {
+  def batchGet [V](queries: GetQueryMulti[V]*): Future[List[V]] = logging ("Batch getting: " + queries) {
     val req = new BatchGetItemRequest()
       .withRequestItems {
         (queries map {query =>
           assert(query.keys.nonEmpty)
           (query.tableName) -> 
             new KeysAndAttributes()
-              .withKeys(query.keys)
+              .withKeys(query.keys.map(_.asJava))
               .withAttributesToGet(query.selector.attributes.map(_.name))
         }).toMap[String,KeysAndAttributes]
       }
@@ -106,7 +78,34 @@ class Dynasty (
       }
     }
   }
-  
+
+  def update (updateQuery: UpdateQuery[_]): Future[Option[Map[String,AttributeValue]]] = {
+    val req = new UpdateItemRequest()
+      .withTableName(tablePrefix + updateQuery.tableName)
+      .withKey(updateQuery.keys)
+      .withAttributeUpdates {
+        updateQuery.changes
+        /*
+        updateQuery.changes.flatMap {fn => 
+          val (key, updates) = fn(table)
+          updates.map(key -> _)
+        }.toMap[String,AttributeValueUpdate]
+        */
+      }
+      .withReturnValues(updateQuery.returnValues)
+
+    logger.debug("UpdateItem: " + req)
+
+    withAsyncHandler[UpdateItemRequest,UpdateItemResult](client.updateItemAsync(req, _)) map {x =>
+      //logger.debug("returnValues: " + returnValues)
+      //logger.debug("RETURNED: " + x)
+      
+      Option(x.getAttributes) map (_.toMap)
+    }
+
+  }
+ 
+  /*
   def update [K <: DynamoKey, T <: DynamoTable[K]](table: T, key: K, returnValues: ReturnValue = ReturnValue.NONE)
       (updates: T => (String, Seq[AttributeValueUpdate])*) = logging ("Updating item: "+tablePrefix+table.tableName+" - " + key) {
 
@@ -130,10 +129,22 @@ class Dynasty (
       Option(x.getAttributes) map (_.toMap)
     }
   }
+  */
   
-  def put [K <: DynamoKey, T <: DynamoTable[K]](table: T with DynamoTable[K]) = new PutBuilder(this, table)
+  def put (putQuery: PutQuery[_]): Future[PutItemResult] = {
+    val req = new PutItemRequest()
+      .withTableName(tablePrefix + putQuery.tableName)
+      .withItem(
+        putQuery.values
+      )
+
+    logger.debug("Put Request: " + req)
+
+    withAsyncHandler[PutItemRequest,PutItemResult] (client.putItemAsync(putQuery.expected map {exp => req.withExpected(exp)} getOrElse req, _))
+  }
 }
 
+/*
 class PutBuilder [K <: DynamoKey, T <: DynamoTable[K]](dyn: Dynasty, table: T with DynamoTable[K], expected: Option[Map[String, ExpectedAttributeValue]] = None) {
   lazy val logger = LoggerFactory getLogger getClass
 
@@ -153,3 +164,5 @@ class PutBuilder [K <: DynamoKey, T <: DynamoTable[K]](dyn: Dynasty, table: T wi
   }
   def expected (expectedValues: (T => Seq[(String, ExpectedAttributeValue)])*) = new PutBuilder(dyn, table, Some(expectedValues.map(_(table)).flatten.toMap))
 }
+*/
+

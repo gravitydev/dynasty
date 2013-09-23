@@ -21,9 +21,50 @@ class DynastySpec extends FlatSpec {
     val dyndb = new AmazonDynamoDBAsyncClient()
     val dyn = Dynasty(dyndb)
 
-    dyn.from(tables.UserItem)
-      .where(_.userId === "User", _.userId === "User")
-      .select(u => u.userId ~ u.userId)  
+    dyn get (
+      tables.UserItem.on("user").select(u => 
+        u.userId ~ u.userId
+      )
+    ) map {x =>
+      println(x)
+    } onFailure {case ex: Exception =>
+      println(ex)
+    }
+
+    dyn get (
+      tables.EntryItem.on("user" -> "user").select(u => 
+        u.entryId ~ u.entryId
+      )   
+    ) map {x =>
+      println(x)
+    } onFailure {case ex: Exception =>
+      println(ex)
+    };
+
+    dyn batchGet (
+      tables.UserItem.on(Set("user", "user")).select(u => 
+        u.userId ~ u.userId
+      ),
+      tables.EntryItem.on(Set("test"->"today")).select(e => 
+        e.entryId ~ e.createdAt
+      )
+    ) map {x =>
+      println(x)
+    } onFailure {case ex: Exception =>
+      println(ex)
+    }
+
+    dyn put (
+      tables.UserItem
+        .values(_.userId := "User", _.userId := "User")
+        .expecting(_.userId.isAbsent, _.userId.isAbsent)
+    )
+
+    dyn.update (
+      tables.UserItem.on("user")
+        .set(_.userId := "25")
+        .expecting(_.userId === "24")
+    )
   }
   
 }
