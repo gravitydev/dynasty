@@ -7,12 +7,11 @@ object ApplicationBuild extends Build {
   lazy val dynasty = Project("dynasty", file("."))
     .settings(
       organization := "com.gravitydev",
-      version := "0.0.7-SNAPSHOT",
+      version := "0.0.8-SNAPSHOT",
       scalaVersion := "2.10.0",
       libraryDependencies ++= Seq(
-        "com.typesafe.akka"         %% "akka-actor"   % "2.1.0",
-        "com.amazonaws"             % "aws-java-sdk" % "1.5.6",
-        "org.slf4j"                 % "slf4j-api"    % "1.7.2",
+        "com.amazonaws"             % "aws-java-sdk" % "1.5.8",
+        "org.slf4j"                 % "slf4j-api"    % "1.7.5",
 
         // test
         "org.scalatest" %%  "scalatest"             % "1.8"     % "test" cross CrossVersion.full,
@@ -22,8 +21,7 @@ object ApplicationBuild extends Build {
       offline := true,
       publishTo := Some(gravityRepo),
       publishArtifact in (Compile, packageDoc) := false,
-      scalacOptions ++= Seq("-deprecation", "-unchecked", "-Xcheckinit", "-encoding", "utf8", "-feature", "-language:postfixOps",
-        "-language:implicitConversions"),
+      scalacOptions ++= Seq("-deprecation", "-unchecked", "-Xcheckinit", "-encoding", "utf8", "-feature", "-language:postfixOps", "-Xlint", "-language:implicitConversions"),
       //EclipseKeys.relativizeLibs := false,
       //EclipseKeys.withSource := true,
       resolvers ++= commonResolvers

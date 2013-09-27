@@ -30,7 +30,7 @@ class Dynasty (
 
   def get [V](query: GetQuery[V]): Future[Option[V]] = {
     val req = new GetItemRequest()
-      .withTableName(query.tableName)
+      .withTableName(tablePrefix + query.tableName)
       .withKey(query.key)
       .withAttributesToGet(query.selector.attributes map (_.name))
 
@@ -55,7 +55,7 @@ class Dynasty (
       .withRequestItems {
         (queries map {query =>
           assert(query.keys.nonEmpty)
-          (query.tableName) -> 
+          (tablePrefix+query.tableName) -> 
             new KeysAndAttributes()
               .withKeys(query.keys.map(_.asJava))
               .withAttributesToGet(query.selector.attributes.map(_.name))
