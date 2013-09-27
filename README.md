@@ -14,32 +14,45 @@ object dynamo {
   private val isoUtcDateTimeFormat = ISODateTimeFormat.dateTimeNoMillis.withZoneUTC
   private val isoUtcDateFormat = ISODateTimeFormat.date
   
-  implicit def dateTimeT = new DynamoValueMapper[DateTime, String](StringType)(
+  implicit def dateTimeT = new DynamoValueMapper[DateTime, String](StringT)(
     dateStr => isoUtcDateTimeFormat.parseDateTime(dateStr),
     date => isoUtcDateTimeFormat.print(date)
   )
   
-  implicit def dateT = new DynamoValueMapper[LocalDate, String](StringType)(
+  implicit def dateT = new DynamoValueMapper[LocalDate, String](StringT)(
     dateStr => isoUtcDateFormat.parseLocalDate(dateStr),
     date => isoUtcDateFormat.print(date)
   )
  
   // tables 
   object tables {
-    object UserItem extends DynamoTable [HashKey[String]]("users") {
-      val userId                  = attr[String]      ("user-id")
-      val firstName               = attr[String]      ("first-name")
-      val lastName                = attr[String]      ("last-name")
-      val email                   = attr[String]      ("email")
-      val identities              = attr[Set[String]] ("identities")
-      val createdAt               = attr[DateTime]    ("created-at")
+
+    object UserItem extends DynamoTable [String]("users") {
+      val userId              = attr[String]      ("user-id")
+      val firstName           = attr[String]      ("first-name")
+      val lastName            = attr[String]      ("last-name")
+      val email               = attr[String]      ("email")
+      val identities          = attr[Set[String]] ("identities")
+      val createdAt           = attr[DateTime]    ("created-at")
+
+      def key = userId // hash key
     }
     
-    object IdentityItem extends DynamoTable [HashKey[String]]("identities") {
-      val scheme                  = attr[String]      ("scheme")
-      val key                     = attr[String]      ("key")
-      val secret                  = attr[String]      ("secret")
-      val userId                  = attr[String]      ("user-id")
+    object IdentityItem extends DynamoTable [String]("identities") {
+      val identkey            = attr[String]      ("key")
+      val scheme              = attr[String]      ("scheme")
+      val secret              = attr[String]      ("secret")
+      val userId              = attr[String]      ("user-id")
+
+      def key = identKey // hash key
+    }
+
+    object UserLogItem extends DynamoTable [(String,DateTime)] ("user-logs") {
+      def userId              = attr[String]      ("user-id")
+      def createdAt           = attr[DateTime]    ("created-at")
+      def content             = attr[String]      ("content")
+  
+      def key = (userId, createdAt) // hash and range key 
     }
   }
 }
@@ -48,27 +61,34 @@ object dynamo {
 Usage
 -----
 ```scala
+val dyn = Dynasty(...)
+
 // add identity
-val createIdent = core.Context.dyn.put(tables.IdentityItem)
-  .expected(_.key.exists(false))
-  .set(
-    _.scheme := "openid",
-    _.key := r.body("key").head,
-    _.userId := userId
-  )
+val createIdent = dyn.put(
+  tables.IdentityItem
+    .values(
+      _.scheme := "openid",
+      _.identKey := r.body("key").head,
+      _.userId := userId
+    )
+    .expecting(_.identKey.isAbsent)
+)
 
 // add user
-val createUser = core.Context.dyn.put(tables.UserItem)
-  .expected(_.userId.exists(false))
-  .set(
-    _.userId      := userId,
-    _.identities  := Set(key),
-    _.firstName   := first,
-    _.lastName    := last,
-    _.email       := email,
-    _.createdAt   := DateTime.now
-  )
+val createUser = dyn.put(
+  tables.UserItem
+    .values(
+      _.userId      := userId,
+      _.identities  := Set(key),
+      _.firstName   := first,
+      _.lastName    := last,
+      _.email       := email,
+      _.createdAt   := DateTime.now
+    )
+    .expecting(_.userId.isAbsent)
+)
 
+// executing async using Play Framework (for example)
 Async {
   for {
     _ <- createIdent
@@ -79,4 +99,18 @@ Async {
     "user-name" -> (first + " " + last)
   )
 }
+
+// batch get
+case class User (firstName: String, lastName: String, email: String)
+
+val res = dyn.batchGet(
+  // select multiple items from a user
+  tables.UserItem.on( Set("user1", "user2", "user3") )
+    .select(u => u.name ~ u.firstName ~ u.lastName ~ u.email >> User.apply), // parse a user
+ 
+  // select multiple items from identity, and do something
+  tables.IdentityItem.on( Set("someid", "someid2") )
+    .select(i => i.scheme ~ i.userId >> {(scheme, userId) => s"Scheme: ${scheme}, User: ${userId}"})
+)
+
 ```

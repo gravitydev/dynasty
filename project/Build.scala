@@ -7,7 +7,7 @@ object ApplicationBuild extends Build {
   lazy val dynasty = Project("dynasty", file("."))
     .settings(
       organization := "com.gravitydev",
-      version := "0.0.6-SNAPSHOT",
+      version := "0.0.7-SNAPSHOT",
       scalaVersion := "2.10.0",
       libraryDependencies ++= Seq(
         "com.typesafe.akka"         %% "akka-actor"   % "2.1.0",
