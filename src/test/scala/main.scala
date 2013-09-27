@@ -56,7 +56,11 @@ class DynastySpec extends FlatSpec {
 
     dyn put (
       tables.UserItem
-        .values(_.userId := "User", _.userId := "User")
+        .values(
+          _.userId := "User", 
+          _.userId := "User",
+          _.userId :? None
+        )
         .expecting(_.userId.isAbsent, _.userId.isAbsent)
     )
 

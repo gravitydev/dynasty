@@ -13,7 +13,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{future, promise, Future, Promise}
 import scala.collection.JavaConversions._
 
-class AssignmentProxy (val name: String, val put: Seq[AttributeValue], val set: AttributeValueUpdate)
+class AssignmentProxy (val name: String, val put: Seq[AttributeValue], val set: Seq[AttributeValueUpdate])
 
 sealed abstract class DynamoType [T](
   val get: AttributeValue => T,
@@ -154,7 +154,7 @@ object `package` {
   implicit def fromLong (value: Long) = new AttributeValue().withN(value.toString)
 
   implicit def assignmentToPut (value: AssignmentProxy) = value.name -> value.put
-  implicit def assignmentToSet (value: AssignmentProxy) = value.name -> Seq(value.set)
+  implicit def assignmentToSet (value: AssignmentProxy) = value.name -> value.set
  
   /*
   def itemRequest [K<:DynamoKey, T<:DynamoTable[K], V<:Any](table: T, key: K*)(attributes: T => AttributeSeq[V]) = {

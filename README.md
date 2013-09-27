@@ -110,7 +110,9 @@ val res = dyn.batchGet(
  
   // select multiple items from identity, and do something
   tables.IdentityItem.on( Set("someid", "someid2") )
-    .select(i => i.scheme ~ i.userId >> {(scheme, userId) => s"Scheme: ${scheme}, User: ${userId}"})
+    .select(i => i.scheme ~ i.userId >> {(scheme, userId) => 
+      s"Scheme: ${scheme}, User: ${userId}"
+    })
 )
 
 ```

@@ -45,7 +45,11 @@ class Attribute [T](val name: String)(implicit val mapper: DynamoMapper[T]) exte
   }
     
   // produce an assignment, let the implicit conversion create an update or a value
-  def := (value: T) = new AssignmentProxy(name, mapper.put(value), mapper.set(value))
+  def := (value: T) = new AssignmentProxy(name, mapper.put(value), Seq(mapper.set(value)))
+
+  def :? (value: Option[T]) = value map {v =>
+    new AssignmentProxy(name, mapper.put(v), Seq(mapper.set(v)))
+  } getOrElse new AssignmentProxy(name, Nil, Nil)
   
   override def toString = "Attribute(name="+name+", mapper="+mapper+")"
   
