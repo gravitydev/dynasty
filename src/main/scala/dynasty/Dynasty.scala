@@ -53,8 +53,7 @@ class Dynasty (
   def batchGet [V](queries: GetQueryMulti[V]*): Future[List[V]] = logging ("Batch getting: " + queries) {
     val req = new BatchGetItemRequest()
       .withRequestItems {
-        (queries map {query =>
-          assert(query.keys.nonEmpty)
+        (queries.filter(_.keys.nonEmpty) map {query =>
           (tablePrefix+query.tableName) -> 
             new KeysAndAttributes()
               .withKeys(query.keys.map(_.asJava))

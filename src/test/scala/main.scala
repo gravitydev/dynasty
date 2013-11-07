@@ -1,13 +1,12 @@
 package com.gravitydev.dynasty
 
-import org.scalatest.FlatSpec
-import org.scalatest.matchers.ShouldMatchers._
+import org.scalatest.{FlatSpec, Matchers}
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient
 import com.amazonaws.services.dynamodbv2.model._
 import data.dynamo._
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class DynastySpec extends FlatSpec {
+class DynastySpec extends FlatSpec with Matchers {
   
   "Basic parsers" should "work" in {
     val data = Map[String,AttributeValue]()

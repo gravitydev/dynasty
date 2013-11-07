@@ -18,7 +18,7 @@ class Attribute [T](val name: String)(implicit val mapper: DynamoMapper[T]) exte
   
   def parse (m: Map[String,AttributeValue]): Option[T] = mapper.get(m, name)
   
-  def ~ [X] (x: Attribute[X]) = new Attribute2(this, x)
+  def ~ [X] (x: AttributeParser[X]) = new Attribute2(this, x)
 
   def >> [X](fn: T=>X) = new MappedAttributeSeq(this, fn)
   
