@@ -85,7 +85,7 @@ val createUser = dyn.put(
       _.email       := email,
       _.createdAt   := DateTime.now
     )
-    .expecting(_.userId.isAbsent)
+    .expecting(_.userId.isAbsent) // check condition
 )
 
 // executing async using Play Framework (for example)

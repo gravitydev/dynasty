@@ -3,21 +3,11 @@ package com.gravitydev.dynasty
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient
 import com.amazonaws.services.dynamodbv2.model._
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext
-import java.nio.ByteBuffer
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import org.slf4j.LoggerFactory
 
 object Dynasty {
   def apply (client: AmazonDynamoDBAsyncClient, tablePrefix: String = "")(implicit ec: ExecutionContext) = new Dynasty(client, tablePrefix)
-}
-
-class KeyValue (key: String, value: AttributeValue) {
-  def toPair = key -> value
-  def toMap = Map(key -> value)
-}
-class KeyValues (key: String, values: Set[AttributeValue]) {
-  //def toMap = Map( 
 }
 
 class Dynasty (
@@ -81,15 +71,9 @@ class Dynasty (
     val req = new UpdateItemRequest()
       .withTableName(tablePrefix + updateQuery.tableName)
       .withKey(updateQuery.keys.asJava)
-      .withAttributeUpdates {
+      .withAttributeUpdates(
         updateQuery.changes.asJava
-        /*
-        updateQuery.changes.flatMap {fn => 
-          val (key, updates) = fn(table)
-          updates.map(key -> _)
-        }.toMap[String,AttributeValueUpdate]
-        */
-      }
+      )
       .withReturnValues(updateQuery.returnValues)
 
     logger.debug("UpdateItem: " + req)
@@ -109,7 +93,9 @@ class Dynasty (
 
     logger.debug("Put Request: " + req)
 
-    withAsyncHandler[PutItemRequest,PutItemResult] (client.putItemAsync(putQuery.expected map {exp => req.withExpected(exp.asJava)} getOrElse req, _))
+    withAsyncHandler[PutItemRequest,PutItemResult] (
+      client.putItemAsync(putQuery.expected map {exp => req.withExpected(exp.asJava)} getOrElse req, _)
+    )
   }
 }
 

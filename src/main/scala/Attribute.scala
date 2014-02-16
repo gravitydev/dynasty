@@ -53,7 +53,7 @@ class Attribute [T](val name: String)(implicit val mapper: DynamoMapper[T]) exte
   
   override def toString = "Attribute(name="+name+", mapper="+mapper+")"
   
-  def ? = new OptionalAttribute(this)
+  //def ? = new OptionalAttribute(this)
   
   def isAbsent = Seq(name -> new ExpectedAttributeValue().withExists(false))
   

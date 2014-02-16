@@ -8,12 +8,9 @@ import scala.collection.JavaConversions._
 import java.nio.ByteBuffer
 import org.slf4j.LoggerFactory
 import scala.language.implicitConversions
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{future, promise, Future, Promise}
+import scala.concurrent.{promise, Future, Promise}
 import scala.collection.JavaConversions._
-
-class AssignmentProxy (val name: String, val put: Seq[AttributeValue], val set: Seq[AttributeValueUpdate])
 
 sealed abstract class DynamoType [T](
   val get: AttributeValue => T,
@@ -31,7 +28,7 @@ class HashAndRangeKeyType[H,R] extends DynamoKeyType[(H,R)]
 
 sealed trait DynamoKey[T] {
   def === (v: T): Map[String,AttributeValue]
-  def in (v: Set[T]): Seq[Map[String,AttributeValue]] //keyValues // = new KeyValues(name, v.map(x => mapper.put(x).head))
+  def in (v: Set[T]): Seq[Map[String,AttributeValue]]
 }
 
 object DynamoKey {
@@ -141,12 +138,6 @@ object `package` {
   
   private [dynasty] def logging [T](tag: String)(f: Future[T]) = f //recover {case e => logger.error(tag + ": Request error", e); throw e}
   
-  /*
-  class OptionalAttributeParser[T](parser: AttributeParser[T]) extends AttributeParser[Option[T]] {
-    def parse (m: M) = Some(parser.parse(m))
-  }
-  */
-
   implicit def tableToQueryBuilder [K,T<:DynamoTable[K]] (table: T with DynamoTable[K]) = new QueryBuilder(table)
  
   implicit def fromString (value: String) = new AttributeValue().withS(value)
@@ -181,9 +172,14 @@ trait AttributeParser [T] {
   def attributes: List[Attribute[_]]
   def parse (m: M): Option[T]
   def map [X](fn: T=>X) = new MappedAttributeSeq(this, fn)
-  //def ? = new OptionalAttributeParser(this)
+  def ? = new OptionalAttributeParser(this)
 }
-  
+
+class OptionalAttributeParser[T](parser: AttributeParser[T]) extends AttributeParser[Option[T]] {
+  def parse (m: M) = Some(parser.parse(m))
+  def attributes = parser.attributes
+  def list = parser.list
+}
 
 trait AttributeSeq [T] extends AttributeParser [T] {
   def attributes = list.foldLeft(List[Attribute[_]]())(_ ++ _.attributes)
