@@ -12,15 +12,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.implicitConversions
 import scala.concurrent.{future, promise, Future, Promise}
 
-class Attribute [T](val name: String)(implicit val mapper: DynamoMapper[T]) extends AttributeParser [T] with AttributeSeq[T] {
+class Attribute [T](val name: String)(implicit val mapper: DynamoMapper[T]) extends Attribute1[T] {
+
   def list = List(this)
+
   override def attributes = List(this)
   
   def parse (m: Map[String,AttributeValue]): Option[T] = mapper.get(m, name)
-  
-  def ~ [X] (x: AttributeParser[X]) = new Attribute2(this, x)
-
-  def >> [X](fn: T=>X) = new MappedAttributeSeq(this, fn)
   
   def += [X](value: X)(implicit ev: Set[X] =:= T) = name -> Seq(new AttributeValueUpdate()
     .withAction(AttributeAction.ADD)

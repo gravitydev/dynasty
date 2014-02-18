@@ -129,13 +129,7 @@ object `package` {
     }
     p.future
   }
-
-  def handler [R<:AmazonWebServiceRequest,X](p: Promise[X]) = new AsyncHandler [R,X] {
-    def onError (ex: Exception) = p failure ex
-    def onSuccess (r: R, x: X) = p success x
-  }
-
-  
+ 
   private [dynasty] def logging [T](tag: String)(f: Future[T]) = f //recover {case e => logger.error(tag + ": Request error", e); throw e}
   
   implicit def tableToQueryBuilder [K,T<:DynamoTable[K]] (table: T with DynamoTable[K]) = new QueryBuilder(table)
@@ -175,23 +169,26 @@ trait AttributeParser [T] {
   def ? = new OptionalAttributeParser(this)
 }
 
-class OptionalAttributeParser[T](parser: AttributeParser[T]) extends AttributeParser[Option[T]] {
-  def parse (m: M) = Some(parser.parse(m))
-  def attributes = parser.attributes
-  def list = parser.list
-}
-
 trait AttributeSeq [T] extends AttributeParser [T] {
   def attributes = list.foldLeft(List[Attribute[_]]())(_ ++ _.attributes)
   def parse (m: M): Option[T]
   override def toString = list.toString
 }
 
-class MappedAttributeSeq [A,B](attr: AttributeParser[A], fn: A=>B) extends AttributeSeq [B] {
+abstract class Attribute1 [T] extends AttributeSeq[T] {
+  def ~ [X] (x: Z[X]) = new Attribute2(this, x)
+  def >> [X](fn: T=>X) = new MappedAttributeSeq(this, fn) 
+}
+
+class MappedAttributeSeq [A,B](attr: AttributeParser[A], fn: A=>B) extends Attribute1[B] {
   def parse (m: M) = attr.parse(m) map fn
   def list = attr.list
-  def ~ [X] (x: Attribute[X]) = new Attribute2(this, x)
 } 
+
+class OptionalAttributeParser[T](parser: AttributeParser[T]) extends Attribute1[Option[T]] {
+  def parse (m: M) = Some(parser.parse(m))
+  def list = parser.list
+}
 
 class Attribute2 [A,B](a:Z[A], b:Z[B]) extends AttributeSeq[(A,B)] {
   def list = List(a,b)
