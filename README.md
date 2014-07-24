@@ -14,12 +14,12 @@ object dynamo {
   private val isoUtcDateTimeFormat = ISODateTimeFormat.dateTimeNoMillis.withZoneUTC
   private val isoUtcDateFormat = ISODateTimeFormat.date
   
-  implicit def dateTimeT = new DynamoValueMapper[DateTime, String](StringT)(
+  implicit def dateTimeT = customType[DateTime, String](
     dateStr => isoUtcDateTimeFormat.parseDateTime(dateStr),
     date => isoUtcDateTimeFormat.print(date)
   )
   
-  implicit def dateT = new DynamoValueMapper[LocalDate, String](StringT)(
+  implicit def dateT = customType[LocalDate, String](
     dateStr => isoUtcDateFormat.parseLocalDate(dateStr),
     date => isoUtcDateFormat.print(date)
   )

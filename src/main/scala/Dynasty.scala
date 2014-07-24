@@ -4,7 +4,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient
 import com.amazonaws.services.dynamodbv2.model._
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
-import org.slf4j.LoggerFactory
+import com.typesafe.scalalogging.slf4j.StrictLogging
 
 object Dynasty {
   def apply (client: AmazonDynamoDBAsyncClient, tablePrefix: String = "")(implicit ec: ExecutionContext) = new Dynasty(client, tablePrefix)
@@ -13,9 +13,7 @@ object Dynasty {
 class Dynasty (
   private [dynasty] val client: AmazonDynamoDBAsyncClient, 
   private [dynasty] val tablePrefix: String
-)(implicit ec: ExecutionContext) {
-  
-  private val logger = LoggerFactory getLogger getClass
+)(implicit ec: ExecutionContext) extends StrictLogging {
 
   def get [V](query: GetQuery[V]): Future[Option[V]] = {
     val req = new GetItemRequest()

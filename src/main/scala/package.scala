@@ -6,21 +6,12 @@ import com.amazonaws.handlers.AsyncHandler
 import com.amazonaws.AmazonWebServiceRequest
 import scala.collection.JavaConversions._
 import java.nio.ByteBuffer
-import org.slf4j.LoggerFactory
+import com.typesafe.scalalogging.slf4j.StrictLogging
 import scala.language.implicitConversions
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{promise, Future, Promise}
+import scala.concurrent.{Future, Promise}
 import scala.collection.JavaConversions._
 
-sealed abstract class DynamoType [T](
-  val get: AttributeValue => T,
-  val getSet: AttributeValue => Set[T],
-  _set: (AttributeValue, T) => Unit,
-  _setSet: (AttributeValue, Set[T]) => Unit
-) {
-  val set = {(v: AttributeValue, t: T) => _set(v,t); v}
-  val setSet = {(v: AttributeValue, t: Set[T]) => _setSet(v,t); v}
-}
 
 sealed abstract class DynamoKeyType[T]
 class HashKeyType[H] extends DynamoKeyType[H]
@@ -29,9 +20,6 @@ class HashAndRangeKeyType[H,R] extends DynamoKeyType[(H,R)]
 sealed trait DynamoKey[T] {
   def === (v: T): Map[String,AttributeValue]
   def in (v: Set[T]): Seq[Map[String,AttributeValue]]
-}
-
-object DynamoKey {
 }
 
 class HashKey[H] (h: Attribute[H]) extends DynamoKey[H] {
@@ -48,71 +36,26 @@ sealed abstract class DynamoKeyValue (val values: Map[String,AttributeValue])
 final class HashKeyValue [H] (hashKey: String, value: AttributeValue) extends DynamoKeyValue(Map(hashKey-> value)) {
   override def toString = "HashKey(" + values + ")"
 }
-/*
-final class HashAndRangeKeyValue [H,R] (values: Map[String,AttributeValue]) extends DynamoKeyValue(values) {
-  override def toString = "HashAndRangeKey(" + values + ")"
-}
-*/
 
 abstract class DynamoTable [K:DynamoKeyType](val tableName: String) {
   def key: DynamoKey[K]
 }
 
-// built-in raw types
-object NumberT extends DynamoType [String] (_.getN, _.getNS.toSet, _ setN _, _ setNS _)
-object StringT extends DynamoType [String] (_.getS, _.getSS.toSet, _ setS _, _ setSS _)
-object BinaryT extends DynamoType [ByteBuffer] (_.getB, _.getBS.toSet, _ setB _, _ setBS _)
+object `package` extends StrictLogging {
+  private def dynastyType [T,X:DynamoType](from: X=>T, to: T=>X) = new DynamoValueMapper2(from, to)
 
-// mappers
-sealed abstract class DynamoMapper [T] {
-  def get: (Map[String,AttributeValue], String) => Option[T]
-  def put: T => Seq[AttributeValue]
-  def set: T => AttributeValueUpdate
-}
-
-sealed abstract class DynamoPrimitiveMapper [T] extends DynamoMapper[T]
-
-class DynamoValueMapper [T,X] (val tpe: DynamoType[X])(
-  val from: X => T, 
-  val to: T => X
-) extends DynamoPrimitiveMapper[T] {
-  def get = (data, name) => data.get(name) map {v => from(tpe.get(v))}
-  def put = value => Seq(tpe.set(new AttributeValue(), to(value)))
-  def set = value => new AttributeValueUpdate().withValue(put(value).head).withAction(AttributeAction.PUT)
-}
-
-class DynamoSetMapper [T,X] (
-  val from: X => T, 
-  val to: T => X
-)(implicit m: DynamoValueMapper[T,X]) extends DynamoMapper[Set[T]] {
-  // empty set can always be retrieved
-  def get = (data, name) => Some(data.get(name) map {x => m.tpe.getSet(x) map from} getOrElse Set[T]())
-  
-  def put = {value =>
-    if (value.isEmpty) Nil
-    else Seq(m.tpe.setSet(new AttributeValue(), value map {x => m.to(x)}))
-  }
-  
-  def set = {value =>
-    if (value.isEmpty) new AttributeValueUpdate().withAction(AttributeAction.DELETE)
-    else new AttributeValueUpdate().withValue(put(value).head).withAction(AttributeAction.PUT)
-  }
-}
-
-object `package` {
+  def customType [T,X:DynamoMapper](from: X=>T, to: T=>X) = new DynamoCustomMapper(from, to)
  
   // built-in mappers
-  implicit def intDynamoType  = new DynamoValueMapper[Int, String]    (NumberT)(_.toInt, _.toString)
-  implicit def longDynamoType = new DynamoValueMapper[Long, String]   (NumberT)(_.toLong, _.toString)
-  implicit def strDynamoType  = new DynamoValueMapper[String, String] (StringT)(x => x, x => x)
-  implicit def boolDynamoType = new DynamoValueMapper[Boolean, String] (NumberT)(_ == 1.toString, if (_) 1.toString else 0.toString)
-  implicit def binaryDynamoType = new DynamoValueMapper[ByteBuffer, ByteBuffer] (BinaryT)(x => x, x => x)
+  implicit def intDynamoType    = dynastyType[Int, String]            (_.toInt, _.toString)(NumberT)
+  implicit def longDynamoType   = dynastyType[Long, String]           (_.toLong, _.toString)(NumberT)
+  implicit def strDynamoType    = dynastyType[String, String]         (x => x, x => x)(StringT)
+  implicit def boolDynamoType   = dynastyType[Boolean, String]        (_ == 1.toString, if (_) 1.toString else 0.toString)(NumberT)
+  implicit def binaryDynamoType = dynastyType[ByteBuffer, ByteBuffer] (x => x, x => x)(BinaryT)
 
-  implicit def setDynamoType [T,X](implicit m: DynamoValueMapper[T,X]) = new DynamoSetMapper[T,X](m.from, m.to)
+  implicit def setDynamoType [T,X](implicit m: DynamoValueMapper2[T,X]) = new DynamoSetMapper[T,X](m.from, m.to)
 
   private[dynasty] type M = Map[String,AttributeValue]
-  
-  private val logger = LoggerFactory getLogger getClass
 
   // key
   implicit def attrToKey[H](h: Attribute[H]): DynamoKey[H] = new HashKey(h)
@@ -120,7 +63,7 @@ object `package` {
 
   // utility
   private [dynasty] def withAsyncHandler [R<:AmazonWebServiceRequest,T] (fn: AsyncHandler[R,T] => Unit): Future[T] = {
-    val p = promise[T]
+    val p = Promise[T]
     fn {
       new AsyncHandler [R,T] {
         def onError (ex: Exception) = p failure ex
