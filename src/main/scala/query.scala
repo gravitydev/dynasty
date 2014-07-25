@@ -17,6 +17,11 @@ case class GetQueryMulti [V](
   selector: AttributeSeq[V]
 )
 
+case class ScanQuery [V] (
+  tableName: String,
+  selector: AttributeSeq[V]
+)
+
 case class PutQuery [T<:DynamoTable[_]] (
   table: T,
   values: Map[String, AttributeValue],
@@ -48,6 +53,11 @@ class QueryBuilder [K,T<:DynamoTable[K]](table: T with DynamoTable[K]) {
       val (key, puts) = fn(table)
       puts.map(key -> _)
     }.toMap[String,AttributeValue]
+  )
+
+  def select [V](attributes: T => AttributeSeq[V]): ScanQuery[V] = ScanQuery (
+    table.tableName,
+    attributes(table)
   )
 }
 

@@ -16,6 +16,19 @@ class DynastySpec extends FlatSpec with Matchers {
     (tables.UserItem.workspaces parse data) should be (Some(Set.empty))
   }
 
+  "Scan table" should "return" in {
+    val client = new AmazonDynamoDBAsyncClient()
+    val dyn = Dynasty(client)
+   
+    dyn scan ( 
+      tables.UserItem.select(u => u.userId ~ u.userId) 
+    )  map {x =>
+      println(x)
+    } onFailure {case ex: Exception =>
+      println(ex)
+    }
+  }
+
   "Get query" should "return" in {
     val dyndb = new AmazonDynamoDBAsyncClient()
     val dyn = Dynasty(dyndb)

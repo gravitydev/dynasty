@@ -34,6 +34,25 @@ class Dynasty (
     }
   }
 
+  def scan [V](query: ScanQuery[V]): Future[List[V]] = {
+    val req = new ScanRequest()
+      .withTableName(tablePrefix + query.tableName)
+      .withAttributesToGet(query.selector.attributes map (_.name) asJava)
+
+    logger.debug("Scan: " + req)
+
+    withAsyncHandler[ScanRequest,ScanResult] (client.scanAsync(req, _)) map {x =>
+      x.getItems.asScala.toList map {res =>
+        val item = res.asScala.toMap
+      
+        query.selector.parse(item) getOrElse {
+          sys.error("Error when parsing [" + query.selector + "] from [" + item + "]")
+        }
+      }
+    }
+
+  }
+
   /**
    * @param request (tableName, Seq(keys), Seq(attributes))
    */
