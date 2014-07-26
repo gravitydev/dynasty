@@ -85,13 +85,14 @@ object `package` extends StrictLogging {
   implicit def assignmentToSet (value: AssignmentTerm) = value.name -> value.set
 
   implicit def equalsToExpectation [T](comp: ComparisonEquals[T]) = 
-    comp.attr.mapper.put(comp.value) map (x => comp.attr.name -> new ExpectedAttributeValue().withValue(x))
+    comp.values map (x => comp.attr.name -> new ExpectedAttributeValue().withValue(x))
 
-  implicit def equalsToCondition [T](comp: ComparisonEquals[T]) = 
+  implicit def equalsToCondition [T](comp: ComparisonEquals[T]): SingleConditionExpr = 
     SingleConditionExpr(
       comp.attr.name, 
       new Condition()
         .withComparisonOperator(ComparisonOperator.EQ)
+        .withAttributeValueList(comp.values)
     )
  
   /*

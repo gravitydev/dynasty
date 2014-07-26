@@ -21,7 +21,17 @@ object ApplicationBuild extends Build {
       offline := true,
       publishTo := Some(gravityRepo),
       publishArtifact in (Compile, packageDoc) := false,
-      scalacOptions ++= Seq("-deprecation", "-unchecked", "-Xcheckinit", "-encoding", "utf8", "-feature", "-language:postfixOps", "-Xlint", "-language:implicitConversions")
+      scalacOptions ++= Seq(
+        "-deprecation", 
+        "-unchecked", 
+        "-Xcheckinit", 
+        "-encoding", 
+        "utf8", 
+        "-feature", 
+        "-language:postfixOps", 
+        "-Xlint", 
+        "-language:implicitConversions"
+      )
       //EclipseKeys.relativizeLibs := false,
       //EclipseKeys.withSource := true,
       //resolvers ++= commonResolvers

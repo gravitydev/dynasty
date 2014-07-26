@@ -1,7 +1,7 @@
 package com.gravitydev.dynasty
 
 import com.amazonaws.services.dynamodbv2.model._
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 /**
  * Intermediate structure representing a generic assignment
@@ -13,9 +13,11 @@ final class AssignmentTerm (val name: String, val put: Seq[AttributeValue], val 
  * Intermediate structure representing a generic comparison
  * Implicit conversions will then turn it into the specific type required based on the context (expectation, condition, etc)
  */
-sealed abstract class ComparisonTerm [T](attr: Attribute[T], op: ComparisonOperator)
+sealed abstract class ComparisonTerm [T](val attr: Attribute[T], val op: ComparisonOperator, val values: Seq[AttributeValue])
 
-case class ComparisonEquals [T:DynamoMapper](attr: Attribute[T], value: T) extends ComparisonTerm (attr, ComparisonOperator.EQ)
+class ComparisonEquals [T](attribute: Attribute[T], value: T)
+  extends ComparisonTerm [T](attribute, ComparisonOperator.EQ, attribute.mapper.put(value))
+
 
 sealed abstract class ConditionExpr(val condOp: ConditionalOperator, val conditions: Map[String,Condition])
 
