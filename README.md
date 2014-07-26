@@ -12,6 +12,16 @@ Features:
 
 Current drawback: Some of the newer features of DynamoDB are not available through the DSL yet.
 
+Installation
+------------
+Dynasty is published using a maven repository. Here are the lines for SBT:
+
+```sbt
+resolvers += "gravity" at "https://devstack.io/repo/gravitydev/public"
+
+libraryDependencies += "com.gravitydev" %% "dynasty" % "0.0.20-SNAPSHOT"
+```
+
 Setup
 -----
 ```scala
