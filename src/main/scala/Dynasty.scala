@@ -54,6 +54,7 @@ class Dynasty (
 
   def query [V](query: QueryReq[V]): Future[List[V]] = {
     val req = new QueryRequest()
+      .withTableName(tablePrefix + query.tableName)
       .withConditionalOperator(query.predicate.condOp)
       .withKeyConditions(query.predicate.conditions.asJava)
 

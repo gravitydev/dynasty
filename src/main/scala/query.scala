@@ -49,7 +49,7 @@ case class ScanQuery [V] (
 )
 
 case class QueryReq [V](
-  tablename: String,
+  tableName: String,
   predicate: ConditionExpr,
   selector: AttributeSeq[V]
 )
