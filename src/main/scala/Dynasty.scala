@@ -50,7 +50,22 @@ class Dynasty (
         }
       }
     }
+  }
 
+  def query [V](query: QueryReq[V]): Future[List[V]] = {
+    val req = new QueryRequest()
+      .withConditionalOperator(query.predicate.condOp)
+      .withKeyConditions(query.predicate.conditions.asJava)
+
+    withAsyncHandler[QueryRequest,QueryResult] (client.queryAsync(req, _)) map {x =>
+      x.getItems.asScala.toList map {res =>
+        val item = res.asScala.toMap
+      
+        query.selector.parse(item) getOrElse {
+          sys.error("Error when parsing [" + query.selector + "] from [" + item + "]")
+        }
+      }
+    }
   }
 
   /**

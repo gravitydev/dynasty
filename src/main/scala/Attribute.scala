@@ -12,7 +12,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.implicitConversions
 import scala.concurrent.{future, promise, Future, Promise}
 
-class Attribute [T](val name: String)(implicit val mapper: DynamoMapper[T]) extends Attribute1[T] {
+class Attribute [T:DynamoMapper](val name: String) extends Attribute1[T] {
+  val mapper = implicitly[DynamoMapper[T]]
 
   def list = List(this)
 
@@ -43,19 +44,18 @@ class Attribute [T](val name: String)(implicit val mapper: DynamoMapper[T]) exte
   }
     
   // produce an assignment, let the implicit conversion create an update or a value
-  def := (value: T) = new AssignmentProxy(name, mapper.put(value), Seq(mapper.set(value)))
+  def := (value: T) = new AssignmentTerm(name, mapper.put(value), Seq(mapper.set(value)))
 
   def :? (value: Option[T]) = value map {v =>
-    new AssignmentProxy(name, mapper.put(v), Seq(mapper.set(v)))
-  } getOrElse new AssignmentProxy(name, Nil, Nil)
+    new AssignmentTerm(name, mapper.put(v), Seq(mapper.set(v)))
+  } getOrElse new AssignmentTerm(name, Nil, Nil)
   
   override def toString = "Attribute(name="+name+", mapper="+mapper+")"
   
-  //def ? = new OptionalAttribute(this)
-  
   def isAbsent = Seq(name -> new ExpectedAttributeValue().withExists(false))
   
-  def === (v: T) = mapper.put(v) map (x => name -> new ExpectedAttributeValue().withValue(x))
+  //def === (v: T) = mapper.put(v) map (x => name -> new ExpectedAttributeValue().withValue(x))
+  def === (v: T) = new ComparisonEquals(this, v)
 }
 
 class OptionalAttribute [T] (attr: Attribute[T]) extends AttributeParser[Option[T]] with AttributeSeq[Option[T]] {

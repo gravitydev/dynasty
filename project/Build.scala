@@ -6,11 +6,11 @@ object ApplicationBuild extends Build {
   lazy val dynasty = Project("dynasty", file("."))
     .settings(
       organization := "com.gravitydev",
-      version := "0.0.19-SNAPSHOT",
+      version := "0.0.20-SNAPSHOT",
       scalaVersion := "2.11.1",
       crossScalaVersions := Seq("2.11.1", "2.10.4"),
       libraryDependencies ++= Seq(
-        "com.amazonaws"             % "aws-java-sdk" % "1.7.1",
+        "com.amazonaws"             % "aws-java-sdk" % "1.8.5",
         "com.typesafe.scala-logging" %% "scala-logging-slf4j" % "2.1.2",
 
         // test

@@ -1,4 +1,16 @@
-Dynasty is a DynamoDB toolkit for scala
+Dynasty is a DynamoDB toolkit for scala.
+
+It provides a type-safe, clean, concise alternative to the java API.
+
+Features:
+- Custom types (typeclasses)
+- Minimizes boilerplate
+- Type-safety: designed to catch MANY errors at compile-time, rather than run-time
+- Asynchronous (always returns scala futures)
+- DSL that supports most commonly used DynamoDB features (batch gets, expectations, conditions, etc)
+- Cleaner, easier to use
+
+Current drawback: Some of the newer features of DynamoDB are not available through the DSL yet.
 
 Setup
 -----
@@ -10,10 +22,11 @@ import org.joda.time.{DateTime, LocalDate}
 import org.joda.time.format.ISODateTimeFormat
 
 object dynamo {
-  // custom types
+  // aliasing some joda types
   private val isoUtcDateTimeFormat = ISODateTimeFormat.dateTimeNoMillis.withZoneUTC
   private val isoUtcDateFormat = ISODateTimeFormat.date
   
+  // custom types
   implicit def dateTimeT = customType[DateTime, String](
     dateStr => isoUtcDateTimeFormat.parseDateTime(dateStr),
     date => isoUtcDateTimeFormat.print(date)

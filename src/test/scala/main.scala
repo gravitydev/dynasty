@@ -29,6 +29,17 @@ class DynastySpec extends FlatSpec with Matchers {
     }
   }
 
+  "Query table" should "return" in {
+    val dyndb = new AmazonDynamoDBAsyncClient()
+    val dyn = Dynasty(dyndb)
+
+    dyn query (
+      tables.UserItem
+        .where(u => u.userId === "userid")
+        .select(_.userId)
+    )
+  }
+
   "Get query" should "return" in {
     val dyndb = new AmazonDynamoDBAsyncClient()
     val dyn = Dynasty(dyndb)
