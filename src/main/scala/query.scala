@@ -52,8 +52,9 @@ case class ScanQuery [V] (
 
 case class QueryReq [V](
   tableName: String,
-  predicate: ConditionExpr,
-  selector: AttributeSeq[V]
+  predicate: Map[String,Condition],
+  selector: AttributeSeq[V],
+  filter: Option[ConditionExpr]
 )
 
 case class PutQuery [T<:DynamoTable[_]] (
@@ -96,8 +97,7 @@ class QueryBuilder [K,T<:DynamoTable[K]](table: T with DynamoTable[K]) {
     }.toMap[String,AttributeValue]
   )
 
-  /** Build 'query' request */
-   def where (predicate: T => ConditionExpr) = new QueryBuilder.WithPredicate[K,T](table, predicate(table))
+  def where (conditions: T => SingleConditionExpr*): QueryBuilder.WithPredicate[K,T] = ???
 
   /** Build 'scan' request */
   def select [V](attributes: T => AttributeSeq[V]): ScanQuery[V] = ScanQuery (
@@ -139,11 +139,15 @@ object QueryBuilder {
       Some(expected)
     )
   }
-  class WithPredicate [K,T<:DynamoTable[K]](table: T, predicate: ConditionExpr) {
+  class WithPredicate [K,T<:DynamoTable[K]](table: T, predicate: Map[String,Condition], filter: Option[ConditionExpr] = None) {
+    /** Build 'query' request */
+    def filter (filterFn: T => ConditionExpr) = new QueryBuilder.WithPredicate[K,T](table, predicate, Some(filterFn(table)))
+
     def select [V](attributes: T => AttributeSeq[V]): QueryReq[V] = QueryReq[V](
       table.tableName,
       predicate,
-      attributes(table)
+      attributes(table),
+      filter
     ) 
   }
 }

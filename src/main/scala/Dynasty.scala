@@ -55,10 +55,15 @@ class Dynasty (
   def query [V](query: QueryReq[V]): Future[List[V]] = {
     val req = new QueryRequest()
       .withTableName(tablePrefix + query.tableName)
-      .withConditionalOperator(query.predicate.condOp)
-      .withKeyConditions(query.predicate.conditions.asJava)
+      .withKeyConditions(query.predicate.asJava)
 
-    withAsyncHandler[QueryRequest,QueryResult] (client.queryAsync(req, _)) map {x =>
+    val req2 = query.filter map {x =>
+      req
+        .withQueryFilter(x.conditions.asJava)
+        .withConditionalOperator(x.condOp)
+    } getOrElse req
+
+    withAsyncHandler[QueryRequest,QueryResult] (client.queryAsync(req2, _)) map {x =>
       x.getItems.asScala.toList map {res =>
         val item = res.asScala.toMap
       

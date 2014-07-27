@@ -35,7 +35,11 @@ class DynastySpec extends FlatSpec with Matchers {
 
     dyn query (
       tables.UserItem
-        .where(u => u.userId === "userid")
+        .where(
+          u => u.userId === "userid",
+          u => u.userId === "userid"
+        )
+        .filter(u => u.userId === "userid" && u.userId === "userid")
         .select(_.userId)
     )
   }
