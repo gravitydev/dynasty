@@ -97,7 +97,13 @@ class QueryBuilder [K,T<:DynamoTable[K]](table: T with DynamoTable[K]) {
     }.toMap[String,AttributeValue]
   )
 
-  def where (conditions: T => SingleConditionExpr*): QueryBuilder.WithPredicate[K,T] = ???
+  def where (conditions: T => SingleConditionExpr*): QueryBuilder.WithPredicate[K,T] = new QueryBuilder.WithPredicate(
+    table, 
+    conditions map {cond => 
+      val x = cond(table)
+      x.attrName -> x.condition
+    } toMap
+  )
 
   /** Build 'scan' request */
   def select [V](attributes: T => AttributeSeq[V]): ScanQuery[V] = ScanQuery (

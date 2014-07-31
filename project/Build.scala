@@ -6,7 +6,7 @@ object ApplicationBuild extends Build {
   lazy val dynasty = Project("dynasty", file("."))
     .settings(
       organization := "com.gravitydev",
-      version := "0.0.20-SNAPSHOT",
+      version := "0.0.21-SNAPSHOT",
       scalaVersion := "2.11.1",
       crossScalaVersions := Seq("2.11.1", "2.10.4"),
       libraryDependencies ++= Seq(
