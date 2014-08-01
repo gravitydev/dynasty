@@ -19,7 +19,7 @@ class Dynasty (
     val req = new GetItemRequest()
       .withTableName(tablePrefix + query.tableName)
       .withKey(query.key.asJava)
-      .withAttributesToGet(query.selector.attributes map (_.name) asJava)
+      .withAttributesToGet(query.selector.attributes.map(_.name).distinct asJava)
 
     logger.debug("GetItem: " + req)
 
@@ -37,7 +37,7 @@ class Dynasty (
   def scan [V](query: ScanQuery[V]): Future[List[V]] = {
     val req = new ScanRequest()
       .withTableName(tablePrefix + query.tableName)
-      .withAttributesToGet(query.selector.attributes map (_.name) asJava)
+      .withAttributesToGet(query.selector.attributes.map(_.name).distinct.asJava)
 
     logger.debug("Scan: " + req)
 
@@ -55,6 +55,7 @@ class Dynasty (
   def query [V](query: QueryReq[V]): Future[List[V]] = {
     val req = new QueryRequest()
       .withTableName(tablePrefix + query.tableName)
+      .withAttributesToGet(query.selector.attributes.map(_.name).distinct.asJava)
       .withKeyConditions(query.predicate.asJava)
 
     val req2 = query.filter map {x =>
