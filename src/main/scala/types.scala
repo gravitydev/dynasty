@@ -77,10 +77,10 @@ class DynamoCustomMapper [T,X:DynamoMapperSingle](val from: X=>T, val to: T=>X) 
 }
 
 @deprecated("You should use customType", "0.0.18-SNAPSHOT")
-class DynamoValueMapper [T,X] (val tpe: DynamoPrimitive[X])(
+class DynamoValueMapper [T,X] (val tpe: DynamoPrimitive[X]) (
   from: X => T,
   to: T => X
-) {
+) extends DynamoMapper[T] {
   val get: (Map[String,AttributeValue], String) => Option[T] = (data, name) => data.get(name) map {v => from(tpe.get(v))}
   val put: T => Seq[AttributeValue] = value => Seq(tpe.set(new AttributeValue(), to(value)))
   val set: T => AttributeValueUpdate = value => new AttributeValueUpdate().withValue(put(value).head).withAction(AttributeAction.PUT)
