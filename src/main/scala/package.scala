@@ -42,9 +42,9 @@ abstract class DynamoTable [K:DynamoKeyType](val tableName: String) {
 }
 
 object `package` extends StrictLogging {
-  private def dynastyType [T,X:DynamoType](from: X=>T, to: T=>X) = new DynamoValueMapper2(from, to)
+  private def dynastyType [T,X:DynamoPrimitive](from: X=>T, to: T=>X) = new DynamoPrimitiveMapper(from, to)
 
-  def customType [T,X:DynamoMapper](from: X=>T, to: T=>X) = new DynamoCustomMapper(from, to)
+  def customType [T,X:DynamoMapperSingle](from: X=>T, to: T=>X) = new DynamoCustomMapper(from, to)
  
   // built-in mappers
   implicit def intDynamoType    = dynastyType[Int, String]            (_.toInt, _.toString)(NumberT)
@@ -53,7 +53,7 @@ object `package` extends StrictLogging {
   implicit def boolDynamoType   = dynastyType[Boolean, String]        (_ == 1.toString, if (_) 1.toString else 0.toString)(NumberT)
   implicit def binaryDynamoType = dynastyType[ByteBuffer, ByteBuffer] (x => x, x => x)(BinaryT)
 
-  implicit def setDynamoType [T,X](implicit m: DynamoValueMapper2[T,X]) = new DynamoSetMapper[T,X](m.from, m.to)
+  implicit def setDynamoType [T](implicit m: DynamoMapperSingle[T]) = new DynamoSetMapper[T]
 
   private[dynasty] type M = Map[String,AttributeValue]
 
@@ -108,10 +108,10 @@ object `package` extends StrictLogging {
   
   private [dynasty] type Z[X] = AttributeParser[X]
 
-  def attr [T] (name: String)(implicit att: DynamoMapper[T]) = new Attribute [T](name) 
+  def attr [T] (name: String)(implicit att: DynamoType[T]) = new Attribute [T](name) 
 
-  implicit def toHashKeyType[H:DynamoMapper]: DynamoKeyType[H] = new HashKeyType[H]
-  implicit def toHashAndRangeKeyType[H:DynamoMapper, R:DynamoMapper]: DynamoKeyType[(H,R)] = new HashAndRangeKeyType[H,R]
+  implicit def toHashKeyType[H:DynamoType]: DynamoKeyType[H] = new HashKeyType[H]
+  implicit def toHashAndRangeKeyType[H:DynamoType, R:DynamoType]: DynamoKeyType[(H,R)] = new HashAndRangeKeyType[H,R]
 
 }
 
@@ -126,7 +126,7 @@ trait AttributeParser [T] {
 trait AttributeSeq [T] extends AttributeParser [T] {
   def attributes = list.foldLeft(List[Attribute[_]]())(_ ++ _.attributes)
   def parse (m: M): Option[T]
-  override def toString = list.toString
+  override def toString = getClass.getName.toString + "(" + list.toString + ")"
 }
 
 abstract class Attribute1 [T] extends AttributeSeq[T] {

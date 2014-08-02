@@ -12,8 +12,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.implicitConversions
 import scala.concurrent.{future, promise, Future, Promise}
 
-class Attribute [T:DynamoMapper](val name: String) extends Attribute1[T] {
-  val mapper = implicitly[DynamoMapper[T]]
+class Attribute [T:DynamoType](val name: String) extends Attribute1[T] {
+  val mapper = implicitly[DynamoType[T]]
 
   def list = List(this)
 
@@ -56,11 +56,5 @@ class Attribute [T:DynamoMapper](val name: String) extends Attribute1[T] {
   
   //def === (v: T) = mapper.put(v) map (x => name -> new ExpectedAttributeValue().withValue(x))
   def === (v: T) = new ComparisonEquals(this, v)
-}
-
-class OptionalAttribute [T] (attr: Attribute[T]) extends AttributeParser[Option[T]] with AttributeSeq[Option[T]] {
-  def list = attr.list
-  def parse (m: Map[String,AttributeValue]) = Some(attr.parse(m))
-  override def toString = "OptionalAttribute(" + attr + ")"
 }
 
