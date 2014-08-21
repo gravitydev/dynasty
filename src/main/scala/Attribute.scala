@@ -8,7 +8,6 @@ import scala.collection.JavaConversions._
 import java.nio.ByteBuffer
 import scala.concurrent.Future
 import org.slf4j.LoggerFactory
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.implicitConversions
 import scala.concurrent.{future, promise, Future, Promise}
 

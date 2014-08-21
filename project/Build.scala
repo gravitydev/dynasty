@@ -6,8 +6,8 @@ object ApplicationBuild extends Build {
   lazy val dynasty = Project("dynasty", file("."))
     .settings(
       organization := "com.gravitydev",
-      version := "0.1.0-SNAPSHOT",
-      scalaVersion := "2.11.1",
+      version := "0.1.1-SNAPSHOT",
+      scalaVersion := "2.11.2",
       crossScalaVersions := Seq("2.11.1", "2.10.4"),
       libraryDependencies ++= Seq(
         "com.amazonaws"             % "aws-java-sdk" % "1.8.5",
@@ -32,16 +32,7 @@ object ApplicationBuild extends Build {
         "-Xlint", 
         "-language:implicitConversions"
       )
-      //EclipseKeys.relativizeLibs := false,
-      //EclipseKeys.withSource := true,
-      //resolvers ++= commonResolvers
     )
-
-  val commonResolvers = Seq(
-    //gravityRepo//,
-    //"gravity" at "http://repos.gravitydev.com/app/repos/12",
-    //"gravity2" at "http://repo.gravitydev.com/"
-  )
 
   val gravityRepo = "gravitydev" at "https://devstack.io/repo/gravitydev/public"
 }
