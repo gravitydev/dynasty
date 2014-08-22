@@ -57,7 +57,7 @@ case class QueryReq [V](
   filter: Option[ConditionExpr],
   reverseOrder: Boolean = false
 ) {
-  def reverse = copy(reverseOrder = false)
+  def reverse = copy(reverseOrder = true)
 }
 
 case class PutQuery [T<:DynamoTable[_]] (
