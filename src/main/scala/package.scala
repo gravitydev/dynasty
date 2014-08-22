@@ -201,7 +201,18 @@ class Attribute10 [A,B,C,D,E,F,G,H,I,J](a:Z[A], b:Z[B], c:Z[C], d:Z[D], e:Z[E], 
 class Attribute11 [A,B,C,D,E,F,G,H,I,J,K](a:Z[A], b:Z[B], c:Z[C], d:Z[D], e:Z[E], f:Z[F], g:Z[G], h:Z[H], i:Z[I], j:Z[J], k:Z[K]) extends AttributeSeq[(A,B,C,D,E,F,G,H,I,J,K)] {
   def list = List(a,b,c,d,e,f,g,h,i,j,k)
   def parse (m: M) = for (av <- a parse m; bv <- b parse m; cv <- c parse m; dv <- d parse m; ev <- e parse m; fv <- f parse m; gv <- g parse m; hv <- h parse m; iv <- i parse m; jv <- j parse m; kv <- k parse m) yield (av,bv,cv,dv,ev,fv,gv,hv,iv,jv,kv)
+  def ~ [L] (l: Z[L]) = new Attribute12(a,b,c,d,e,f,g,h,i,j,k,l)
   def >> [V] (fn: (A,B,C,D,E,F,G,H,I,J,K)=>V) = map(fn.tupled)
 }
-
+class Attribute12 [A,B,C,D,E,F,G,H,I,J,K,L](a:Z[A], b:Z[B], c:Z[C], d:Z[D], e:Z[E], f:Z[F], g:Z[G], h:Z[H], i:Z[I], j:Z[J], k:Z[K], l:Z[L]) extends AttributeSeq[(A,B,C,D,E,F,G,H,I,J,K,L)] {
+  def list = List(a,b,c,d,e,f,g,h,i,j,k,l)
+  def parse (m: M) = for (av <- a parse m; bv <- b parse m; cv <- c parse m; dv <- d parse m; ev <- e parse m; fv <- f parse m; gv <- g parse m; hv <- h parse m; iv <- i parse m; jv <- j parse m; kv <- k parse m; lv <- l parse m) yield (av,bv,cv,dv,ev,fv,gv,hv,iv,jv,kv,lv)
+  def ~ [N] (n: Z[N]) = new Attribute13(a,b,c,d,e,f,g,h,i,j,k,l,n)
+  def >> [V] (fn: (A,B,C,D,E,F,G,H,I,J,K,L)=>V) = map(fn.tupled)
+}
+class Attribute13 [A,B,C,D,E,F,G,H,I,J,K,L,N](a:Z[A], b:Z[B], c:Z[C], d:Z[D], e:Z[E], f:Z[F], g:Z[G], h:Z[H], i:Z[I], j:Z[J], k:Z[K], l:Z[L], n:Z[N]) extends AttributeSeq[(A,B,C,D,E,F,G,H,I,J,K,L,N)] {
+  def list = List(a,b,c,d,e,f,g,h,i,j,k,l,n)
+  def parse (m: M) = for (av <- a parse m; bv <- b parse m; cv <- c parse m; dv <- d parse m; ev <- e parse m; fv <- f parse m; gv <- g parse m; hv <- h parse m; iv <- i parse m; jv <- j parse m; kv <- k parse m; lv <- l parse m; nv <- n parse m) yield (av,bv,cv,dv,ev,fv,gv,hv,iv,jv,kv,lv,nv)
+  def >> [V] (fn: (A,B,C,D,E,F,G,H,I,J,K,L,N)=>V) = map(fn.tupled)
+}
 
