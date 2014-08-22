@@ -54,8 +54,11 @@ case class QueryReq [V](
   tableName: String,
   predicate: Map[String,Condition],
   selector: AttributeSeq[V],
-  filter: Option[ConditionExpr]
-)
+  filter: Option[ConditionExpr],
+  reverseOrder: Boolean = false
+) {
+  def reverse = copy(reverseOrder = false)
+}
 
 case class PutQuery [T<:DynamoTable[_]] (
   table: T,

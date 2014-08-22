@@ -64,7 +64,9 @@ class Dynasty (
         .withConditionalOperator(x.condOp)
     } getOrElse req
 
-    withAsyncHandler[QueryRequest,QueryResult] (client.queryAsync(req2, _)) map {x =>
+    val req3 = if (query.reverseOrder) req2.withScanIndexForward(false) else req2
+
+    withAsyncHandler[QueryRequest,QueryResult] (client.queryAsync(req3, _)) map {x =>
       x.getItems.asScala.toList map {res =>
         val item = res.asScala.toMap
       
