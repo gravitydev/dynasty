@@ -12,6 +12,16 @@ Features:
 
 Current drawback: Some of the newer features of DynamoDB are not available through the DSL yet.
 
+Motivation
+----------
+In my opinion, there are 2 main issues with dynamodb and the java api:
+- Verbosity
+- Logic and constraints enforced at runtime by the service
+
+Dynasty leverages scala to address both issues by creating a DSL that is much more concise AND by encoding
+a lot of the constraints and rules of dynamodb on the types of the API, allowing the compiler to check them 
+at compile-time.
+
 Installation
 ------------
 Dynasty is published using a maven repository. Here are the lines for SBT:
