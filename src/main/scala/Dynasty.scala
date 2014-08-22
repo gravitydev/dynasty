@@ -34,6 +34,16 @@ class Dynasty (
     }
   }
 
+  def delete [V](query: DeleteQuery): Future[Unit] = {
+    val req = new DeleteItemRequest()
+      .withTableName(tablePrefix + query.tableName)
+      .withKey(query.key.asJava)
+
+    logger.debug("Delete: " + req)
+
+    withAsyncHandler[DeleteItemRequest,DeleteItemResult] (client.deleteItemAsync(req, _)) map {_ => ()}
+  }
+
   def scan [V](query: ScanQuery[V]): Future[List[V]] = {
     val req = new ScanRequest()
       .withTableName(tablePrefix + query.tableName)

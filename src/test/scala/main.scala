@@ -44,6 +44,13 @@ class DynastySpec extends FlatSpec with Matchers {
     )
   }
 
+  "Delete" should "work" in {
+    val dyndb = new AmazonDynamoDBAsyncClient()
+    val dyn = Dynasty(dyndb)
+
+    dyn.delete( tables.UserItem.on("user") )
+  }
+
   "Get query" should "return" in {
     val dyndb = new AmazonDynamoDBAsyncClient()
     val dyn = Dynasty(dyndb)

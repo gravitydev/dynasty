@@ -81,6 +81,15 @@ case class UpdateQuery [T<:DynamoTable[_]] (
   def expecting (conditions: T=>Seq[(String,ExpectedAttributeValue)]*) = copy(expected = Some(conditions.flatMap(_(table)).toMap))
 }
 
+final case class DeleteQuery (
+  tableName: String,
+  key: Map[String, AttributeValue] 
+)
+object DeleteQuery {
+  implicit def fromQueryBuilderWithKeys(v: QueryBuilder.WithKey[_,_]) = DeleteQuery(v.table.tableName, v.keys)
+}
+
+
 /**
  * DSL for building dynamodb requests
  */
@@ -116,7 +125,7 @@ class QueryBuilder [K,T<:DynamoTable[K]](table: T with DynamoTable[K]) {
 }
 
 object QueryBuilder {
-  class WithKey [K,T<:DynamoTable[K]](table: T with DynamoTable[K], keys: Map[String,AttributeValue]) {
+  class WithKey [K,T<:DynamoTable[K]](val table: T with DynamoTable[K], val keys: Map[String,AttributeValue]) {
     def select [V](attributes: T => AttributeSeq[V]): GetQuery[V] = GetQuery (
       table.tableName,
       keys,

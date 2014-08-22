@@ -19,7 +19,7 @@ Dynasty is published using a maven repository. Here are the lines for SBT:
 ```sbt
 resolvers += "gravity" at "https://devstack.io/repo/gravitydev/public"
 
-libraryDependencies += "com.gravitydev" %% "dynasty" % "0.1.2-SNAPSHOT"
+libraryDependencies += "com.gravitydev" %% "dynasty" % "0.1.3-SNAPSHOT"
 ```
 
 Setup
