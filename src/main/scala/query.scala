@@ -15,9 +15,13 @@ final class AssignmentTerm (val name: String, val put: Seq[AttributeValue], val 
  */
 sealed abstract class ComparisonTerm [T](val attr: Attribute[T], val op: ComparisonOperator, val values: Seq[AttributeValue])
 
-class ComparisonEquals [T](attribute: Attribute[T], value: T)
-  extends ComparisonTerm [T](attribute, ComparisonOperator.EQ, attribute.mapper.put(value))
+class Comparison[T](attribute: Attribute[T], op: ComparisonOperator, value: T)
+  extends ComparisonTerm [T](attribute, op, attribute.mapper.put(value))
 
+/**
+ * Separate type for equals to implicit conversion to an expectation only in the case of equals comparison 
+ */
+class ComparisonEquals[T](attribute: Attribute[T], value: T) extends Comparison[T](attribute, ComparisonOperator.EQ, value)
 
 sealed abstract class ConditionExpr(val condOp: ConditionalOperator, val conditions: Map[String,Condition])
 

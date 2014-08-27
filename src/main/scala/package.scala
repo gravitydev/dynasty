@@ -84,14 +84,15 @@ object `package` extends StrictLogging {
   implicit def assignmentToPut (value: AssignmentTerm) = value.name -> value.put
   implicit def assignmentToSet (value: AssignmentTerm) = value.name -> value.set
 
+  // TODO: Are expectations deprecated? 
   implicit def equalsToExpectation [T](comp: ComparisonEquals[T]) = 
     comp.values map (x => comp.attr.name -> new ExpectedAttributeValue().withValue(x))
 
-  implicit def equalsToCondition [T](comp: ComparisonEquals[T]): SingleConditionExpr = 
+  implicit def equalsToCondition [T](comp: Comparison[T]): SingleConditionExpr = 
     SingleConditionExpr(
       comp.attr.name, 
       new Condition()
-        .withComparisonOperator(ComparisonOperator.EQ)
+        .withComparisonOperator(comp.op)
         .withAttributeValueList(comp.values)
     )
  
