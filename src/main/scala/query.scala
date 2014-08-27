@@ -18,6 +18,9 @@ sealed abstract class ComparisonTerm [T](val attr: Attribute[T], val op: Compari
 class Comparison[T](attribute: Attribute[T], op: ComparisonOperator, value: T)
   extends ComparisonTerm [T](attribute, op, attribute.mapper.put(value))
 
+class BetweenComparison [T](attribute: Attribute[T], start: T, end: T)
+  extends ComparisonTerm [T](attribute, ComparisonOperator.BETWEEN, attribute.mapper.put(start) ++ attribute.mapper.put(end))
+
 /**
  * Separate type for equals to implicit conversion to an expectation only in the case of equals comparison 
  */

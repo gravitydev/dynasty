@@ -52,11 +52,14 @@ class Attribute [T:DynamoType](val name: String) extends Attribute1[T] {
   override def toString = "Attribute(name="+name+", mapper="+mapper+")"
   
   def isAbsent = Seq(name -> new ExpectedAttributeValue().withExists(false))
-  
+ 
+  // comparisons
   def === (v: T) = new ComparisonEquals(this, v)
   def <   (v: T) = new Comparison(this, ComparisonOperator.LT, v)
   def <=  (v: T) = new Comparison(this, ComparisonOperator.LE, v)
   def >   (v: T) = new Comparison(this, ComparisonOperator.GT, v)
   def >=  (v: T) = new Comparison(this, ComparisonOperator.GE, v)
+
+  def between (a: T, b: T) = new BetweenComparison(this, a, b)
 }
 
