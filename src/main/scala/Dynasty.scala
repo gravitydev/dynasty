@@ -76,6 +76,8 @@ class Dynasty (
 
     val req3 = if (query.reverseOrder) req2.withScanIndexForward(false) else req2
 
+    logger.debug("Query: " + req3.toString)
+
     withAsyncHandler[QueryRequest,QueryResult] (client.queryAsync(req3, _)) map {x =>
       x.getItems.asScala.toList map {res =>
         val item = res.asScala.toMap
