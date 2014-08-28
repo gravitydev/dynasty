@@ -88,13 +88,22 @@ object `package` extends StrictLogging {
   implicit def equalsToExpectation [T](comp: ComparisonEquals[T]) = 
     comp.values map (x => comp.attr.name -> new ExpectedAttributeValue().withValue(x))
 
-  implicit def equalsToCondition [T](comp: Comparison[T]): SingleConditionExpr = 
+  implicit def equalsToCondition [T](comp: ComparisonTerm[T]): SingleConditionExpr = 
     SingleConditionExpr(
       comp.attr.name, 
       new Condition()
         .withComparisonOperator(comp.op)
         .withAttributeValueList(comp.values)
     )
+
+  /*
+  implicit def betweenToCondition [T](comp: BetweenComparison[T]): SingleConditionExpr =
+    SingleConditionExpr(
+      comp.attr.name,
+      new Condition()
+        .withComparisonOperator
+    )
+  */
  
   /*
   def itemRequest [K<:DynamoKey, T<:DynamoTable[K], V<:Any](table: T, key: K*)(attributes: T => AttributeSeq[V]) = {
