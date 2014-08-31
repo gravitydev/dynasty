@@ -76,7 +76,11 @@ class Dynasty (
 
     val req3 = if (query.reverseOrder) req2.withScanIndexForward(false) else req2
 
-    logger.debug("Query: " + req3.toString)
+    val req4 = query.limit map (lim => req3.withLimit(lim)) getOrElse req3
+
+    val req5 = if (query.consistentRead) req4 else req4.withConsistentRead(true)
+
+    logger.debug("Query: " + req5.toString)
 
     withAsyncHandler[QueryRequest,QueryResult] (client.queryAsync(req3, _)) map {x =>
       x.getItems.asScala.toList map {res =>
