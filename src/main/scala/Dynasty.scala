@@ -103,7 +103,7 @@ class Dynasty (
           (tablePrefix+query.tableName) -> 
             new KeysAndAttributes()
               .withKeys(query.keys.map(_.asJava).asJava)
-              .withAttributesToGet(query.selector.attributes.map(_.name).asJava)
+              .withAttributesToGet(query.selector.attributes.map(_.name).distinct.asJava)
         }).toMap[String,KeysAndAttributes].asJava
       }
 
