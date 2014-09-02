@@ -68,7 +68,8 @@ case class QueryReq [V](
 ) {
   def reverse = copy(reverseOrder = true)
   def limit (num: Int) = copy(limit = Some(num))
-  def consistent = copy(consistentRead = consistentRead)
+  def consistent = copy(consistentRead = true)
+  def consistent(consistentRead: Boolean) = copy(consistentRead = consistentRead)
 }
 
 case class PutQuery [T<:DynamoTable[_]] (
