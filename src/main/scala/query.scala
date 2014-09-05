@@ -68,7 +68,8 @@ case class QueryReq [V](
   filter: Option[ConditionExpr],
   limit: Option[Int] = None,
   reverseOrder: Boolean = false,
-  consistentRead: Boolean = false
+  consistentRead: Boolean = false,
+  indexName: Option[String] = None
 ) {
   def reverse = copy(reverseOrder = true)
   def limit (num: Int) = copy(limit = Some(num))
@@ -109,7 +110,7 @@ object DeleteQuery {
 /**
  * DSL for building dynamodb requests
  */
-class QueryBuilder [K,T<:DynamoTable[K]](table: T with DynamoTable[K]) {
+class QueryBuilder [K,T<:DynamoTable[K]](table: T with DynamoTable[K], _index: Option[DynamoIndex[T]] = None) {
   /** Build 'get' queries */
   def on (key: K) = new QueryBuilder.WithKey(table, table.key === key)
 
@@ -125,12 +126,15 @@ class QueryBuilder [K,T<:DynamoTable[K]](table: T with DynamoTable[K]) {
     }.toMap[String,AttributeValue]
   )
 
+  def index (indexFn: T => DynamoIndex[T]) = new QueryBuilder(table, _index = Some(indexFn(table)))
+
   def where (conditions: T => SingleConditionExpr*): QueryBuilder.WithPredicate[K,T] = new QueryBuilder.WithPredicate(
     table, 
     conditions map {cond => 
       val x = cond(table)
       x.attrName -> x.condition
-    } toMap
+    } toMap,
+    _index = _index
   )
 
   /** Build 'scan' request */
@@ -173,15 +177,23 @@ object QueryBuilder {
       Some(expected)
     )
   }
-  class WithPredicate [K,T<:DynamoTable[K]](table: T, predicate: Map[String,Condition], filter: Option[ConditionExpr] = None) {
+  class WithPredicate [K,T<:DynamoTable[K]](
+    table: T, 
+    predicate: Map[String,Condition], 
+    _index: Option[DynamoIndex[T]],
+    filter: Option[ConditionExpr] = None
+  ) {
     /** Build 'query' request */
-    def filter (filterFn: T => ConditionExpr) = new QueryBuilder.WithPredicate[K,T](table, predicate, Some(filterFn(table)))
+    def filter (filterFn: T => ConditionExpr) = new QueryBuilder.WithPredicate[K,T](table, predicate, _index, Some(filterFn(table)))
+
+    def index (indexFn: T => DynamoIndex[T]) = new WithPredicate[K,T](table, predicate, _index = Some(indexFn(table)), filter)
 
     def select [V](attributes: T => AttributeSeq[V]): QueryReq[V] = QueryReq[V](
       table.tableName,
       predicate,
       attributes(table),
-      filter
+      filter,
+      indexName = _index.map(_.name)
     ) 
   }
 }

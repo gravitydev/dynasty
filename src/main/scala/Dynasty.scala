@@ -1,5 +1,6 @@
 package com.gravitydev.dynasty
 
+import com.gravitydev.awsutil.awsToScala
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient
 import com.amazonaws.services.dynamodbv2.model._
 import scala.collection.JavaConverters._
@@ -25,7 +26,7 @@ class Dynasty (
 
     logger.debug("GetItem: " + req2)
 
-    withAsyncHandler[GetItemRequest,GetItemResult] (client.getItemAsync(req2, _)) map {x =>
+    awsToScala(client.getItemAsync)(req2) map {x =>
       Option(x.getItem) map {res =>
         val item = res.asScala.toMap
       
@@ -43,7 +44,7 @@ class Dynasty (
 
     logger.debug("Delete: " + req)
 
-    withAsyncHandler[DeleteItemRequest,DeleteItemResult] (client.deleteItemAsync(req, _)) map {_ => ()}
+    awsToScala(client.deleteItemAsync)(req) map {_ => ()}
   }
 
   def scan [V](query: ScanQuery[V]): Future[List[V]] = {
@@ -53,7 +54,7 @@ class Dynasty (
 
     logger.debug("Scan: " + req)
 
-    withAsyncHandler[ScanRequest,ScanResult] (client.scanAsync(req, _)) map {x =>
+    awsToScala(client.scanAsync)(req) map {x =>
       x.getItems.asScala.toList map {res =>
         val item = res.asScala.toMap
       
@@ -82,9 +83,11 @@ class Dynasty (
 
     val req5 = if (query.consistentRead) req4 else req4.withConsistentRead(true)
 
-    logger.debug("Query: " + req5.toString)
+    val req6 = query.indexName map {idx => req5.withIndexName(idx)} getOrElse req5
 
-    withAsyncHandler[QueryRequest,QueryResult] (client.queryAsync(req3, _)) map {x =>
+    logger.debug("Query: " + req6.toString)
+
+    awsToScala(client.queryAsync)(req6) map {x =>
       x.getItems.asScala.toList map {res =>
         val item = res.asScala.toMap
       
@@ -111,7 +114,7 @@ class Dynasty (
 
     logger.debug("BatchGetItem: " + req)
 
-    withAsyncHandler [BatchGetItemRequest,BatchGetItemResult](client.batchGetItemAsync(req, _)) map {r =>
+    awsToScala(client.batchGetItemAsync)(req) map {r =>
       r.getResponses.asScala.toList flatMap {case (k,v) => 
         // find the relevant query
         var parser = queries.find(tablePrefix + _.tableName == k).get.selector
@@ -137,7 +140,7 @@ class Dynasty (
 
     logger.debug("UpdateItem: " + req)
 
-    withAsyncHandler[UpdateItemRequest,UpdateItemResult](client.updateItemAsync(req, _)) map {x =>
+    awsToScala(client.updateItemAsync)(req) map {x =>
       Option(x.getAttributes) map (_.asScala.toMap)
     }
 
@@ -152,9 +155,7 @@ class Dynasty (
 
     logger.debug("Put Request: " + req)
 
-    withAsyncHandler[PutItemRequest,PutItemResult] (
-      client.putItemAsync(putQuery.expected map {exp => req.withExpected(exp.asJava)} getOrElse req, _)
-    )
+    awsToScala(client.putItemAsync)(putQuery.expected map {exp => req.withExpected(exp.asJava)} getOrElse req)
   }
 }
 

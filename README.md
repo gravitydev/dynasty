@@ -10,8 +10,6 @@ Features:
 - DSL that supports most commonly used DynamoDB features (batch gets, expectations, conditions, etc)
 - Cleaner, easier to use
 
-Current drawback: Some of the newer features of DynamoDB are not available through the DSL yet.
-
 Motivation
 ----------
 In my opinion, there are 2 main issues with dynamodb and the java api:
@@ -29,7 +27,7 @@ Dynasty is published using a maven repository. Here are the lines for SBT:
 ```sbt
 resolvers += "gravity" at "https://devstack.io/repo/gravitydev/public"
 
-libraryDependencies += "com.gravitydev" %% "dynasty" % "0.1.12-SNAPSHOT"
+libraryDependencies += "com.gravitydev" %% "dynasty" % "0.1.13-SNAPSHOT"
 ```
 
 Setup

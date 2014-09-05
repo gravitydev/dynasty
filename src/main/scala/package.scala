@@ -37,8 +37,14 @@ final class HashKeyValue [H] (hashKey: String, value: AttributeValue) extends Dy
   override def toString = "HashKey(" + values + ")"
 }
 
+class DynamoIndex[T<:DynamoTable[_]](val name: String)
+
 abstract class DynamoTable [K:DynamoKeyType](val tableName: String) {
   def key: DynamoKey[K]
+
+  protected def attr [T] (name: String)(implicit att: DynamoType[T]) = new Attribute [T](name) 
+
+  protected def index (name: String): DynamoIndex[this.type] = new DynamoIndex[this.type](name)
 }
 
 object `package` extends StrictLogging {
@@ -61,18 +67,6 @@ object `package` extends StrictLogging {
   implicit def attrToKey[H](h: Attribute[H]): DynamoKey[H] = new HashKey(h)
   implicit def attrToKey2[H,R](hr: (Attribute[H], Attribute[R])): DynamoKey[(H,R)] = new HashAndRangeKey(hr._1, hr._2)
 
-  // utility
-  private [dynasty] def withAsyncHandler [R<:AmazonWebServiceRequest,T] (fn: AsyncHandler[R,T] => Unit): Future[T] = {
-    val p = Promise[T]
-    fn {
-      new AsyncHandler [R,T] {
-        def onError (ex: Exception) = p failure ex
-        def onSuccess (r: R, x: T) = p success x
-      }
-    }
-    p.future
-  }
- 
   private [dynasty] def logging [T](tag: String)(f: Future[T]) = f //recover {case e => logger.error(tag + ": Request error", e); throw e}
   
   implicit def tableToQueryBuilder [K,T<:DynamoTable[K]] (table: T with DynamoTable[K]) = new QueryBuilder(table)
@@ -96,29 +90,8 @@ object `package` extends StrictLogging {
         .withAttributeValueList(comp.values)
     )
 
-  /*
-  implicit def betweenToCondition [T](comp: BetweenComparison[T]): SingleConditionExpr =
-    SingleConditionExpr(
-      comp.attr.name,
-      new Condition()
-        .withComparisonOperator
-    )
-  */
- 
-  /*
-  def itemRequest [K<:DynamoKey, T<:DynamoTable[K], V<:Any](table: T, key: K*)(attributes: T => AttributeSeq[V]) = {
-    (table.tableName, key.map(_.key).toSeq, attributes(table).attributes map {_.name})
-  }
-  */
- 
-  /*
-  def key [H](hash: H)(implicit hev: H => (String,AttributeValue)) = new HashKey[H](Map(hev(hash)))
-  def key [H,R](hash: H, range: R)(implicit hev: H => (String,AttributeValue), rev: R => (String,AttributeValue)) = new HashAndRangeKey[H,R](Map(hev(hash), rev(range)))
-  */
   
   private [dynasty] type Z[X] = AttributeParser[X]
-
-  def attr [T] (name: String)(implicit att: DynamoType[T]) = new Attribute [T](name) 
 
   implicit def toHashKeyType[H:DynamoType]: DynamoKeyType[H] = new HashKeyType[H]
   implicit def toHashAndRangeKeyType[H:DynamoType, R:DynamoType]: DynamoKeyType[(H,R)] = new HashAndRangeKeyType[H,R]
