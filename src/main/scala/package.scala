@@ -37,7 +37,7 @@ final class HashKeyValue [H] (hashKey: String, value: AttributeValue) extends Dy
   override def toString = "HashKey(" + values + ")"
 }
 
-class DynamoIndex[T<:DynamoTable[_]](val name: String)
+class DynamoIndex[+T<:DynamoTable[_]](val name: String)
 
 abstract class DynamoTable [K:DynamoKeyType](val tableName: String) {
   def key: DynamoKey[K]
