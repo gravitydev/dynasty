@@ -21,7 +21,7 @@ class Dynasty (
       .withKey(query.key.asJava)
       .withAttributesToGet(query.selector.attributes.map(_.name).distinct asJava)
 
-    val req2 = if (query.consistentRead) req4 else req.withConsistentRead(true)
+    val req2 = if (query.consistentRead) req else req.withConsistentRead(true)
 
     logger.debug("GetItem: " + req2)
 
