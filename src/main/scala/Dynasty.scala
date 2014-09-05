@@ -21,9 +21,11 @@ class Dynasty (
       .withKey(query.key.asJava)
       .withAttributesToGet(query.selector.attributes.map(_.name).distinct asJava)
 
-    logger.debug("GetItem: " + req)
+    val req2 = if (query.consistentRead) req4 else req.withConsistentRead(true)
 
-    withAsyncHandler[GetItemRequest,GetItemResult] (client.getItemAsync(req, _)) map {x =>
+    logger.debug("GetItem: " + req2)
+
+    withAsyncHandler[GetItemRequest,GetItemResult] (client.getItemAsync(req2, _)) map {x =>
       Option(x.getItem) map {res =>
         val item = res.asScala.toMap
       

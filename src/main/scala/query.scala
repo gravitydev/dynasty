@@ -44,8 +44,12 @@ case class OrConditionExpr (conds: Map[String,Condition]) extends ConditionExpr(
 final case class GetQuery [V] (
   tableName: String,
   key: Map[String, AttributeValue],
-  selector: AttributeSeq[V]
-)
+  selector: AttributeSeq[V],
+  consistentRead: Boolean = false
+) {
+  def consistent = copy(consistentRead = true)
+  def consistent(consistentRead: Boolean) = copy(consistentRead = consistentRead)
+}
 final case class GetQueryMulti [V](
   tableName: String,
   keys: Seq[Map[String, AttributeValue]],
