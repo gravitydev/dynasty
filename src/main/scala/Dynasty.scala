@@ -81,7 +81,7 @@ class Dynasty (
 
     val req4 = query.limit map (lim => req3.withLimit(lim)) getOrElse req3
 
-    val req5 = if (query.consistentRead) req4 else req4.withConsistentRead(true)
+    val req5 = if (query.consistentRead) req4.withConsistentRead(true) else req4
 
     val req6 = query.indexName map {idx => req5.withIndexName(idx)} getOrElse req5
 
