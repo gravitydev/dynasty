@@ -48,7 +48,7 @@ object DynamoMapper {
 }
 
 /**
- * Maps a type to the dynamo API
+ * Maps a type to a 'single' type (non set)
  */
 sealed abstract class DynamoMapperSingle [T] extends DynamoType[T] {
   def getSet (s: AttributeValue): Set[T]

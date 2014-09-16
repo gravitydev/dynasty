@@ -3,14 +3,14 @@ name := "dynasty"
 
 organization := "com.gravitydev"
 
-version := "0.1.13-SNAPSHOT"
+version := "0.1.14-SNAPSHOT"
 
 scalaVersion := "2.11.2"
 
 crossScalaVersions := Seq("2.11.2", "2.10.4")
 
 libraryDependencies ++= Seq(
-  "com.amazonaws"             % "aws-java-sdk" % "1.8.9.1",
+  "com.amazonaws"             % "aws-java-sdk" % "1.8.10.1",
   "com.typesafe.scala-logging" %% "scala-logging-slf4j" % "2.1.2",
   "com.gravitydev" %% "awsutil" % "0.0.2-SNAPSHOT",
   "org.scalatest" % "scalatest_2.10" % "2.0" % "test",

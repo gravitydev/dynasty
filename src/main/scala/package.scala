@@ -55,6 +55,7 @@ object `package` extends StrictLogging {
   // built-in mappers
   implicit def intDynamoType    = dynastyType[Int, String]            (_.toInt, _.toString)(NumberT)
   implicit def longDynamoType   = dynastyType[Long, String]           (_.toLong, _.toString)(NumberT)
+  implicit def decimalType      = dynastyType[BigDecimal, String]     (BigDecimal.apply, _.toString)(NumberT)
   implicit def strDynamoType    = dynastyType[String, String]         (x => x, x => x)(StringT)
   implicit def boolDynamoType   = dynastyType[Boolean, String]        (_ == 1.toString, if (_) 1.toString else 0.toString)(NumberT)
   implicit def binaryDynamoType = dynastyType[ByteBuffer, ByteBuffer] (x => x, x => x)(BinaryT)

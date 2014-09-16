@@ -23,6 +23,10 @@ class Attribute [T:DynamoType](val name: String) extends Attribute1[T] {
   def += [X](value: X)(implicit ev: Set[X] =:= T) = name -> Seq(new AttributeValueUpdate()
     .withAction(AttributeAction.ADD)
     .withValue(mapper.put(ev(Set(value))).head)) // hackish...
+
+  def -= [X](value: X)(implicit ev: Set[X] =:= T) = name -> Seq(new AttributeValueUpdate()
+    .withAction(AttributeAction.DELETE)
+    .withValue(mapper.put(ev(Set(value))).head)) // hackish...
     
   def + (value: T)(implicit ev: Int =:= T) = name -> Seq(new AttributeValueUpdate()
     .withAction(AttributeAction.ADD)
