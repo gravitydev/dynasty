@@ -208,7 +208,7 @@ class Attribute14 [A,B,C,D,E,F,G,H,I,J,K,L,N,O](a:Z[A], b:Z[B], c:Z[C], d:Z[D], 
   def >> [V] (fn: (A,B,C,D,E,F,G,H,I,J,K,L,N,O)=>V) = map(fn.tupled)
 }
 class Attribute15 [A,B,C,D,E,F,G,H,I,J,K,L,N,O,P](a:Z[A], b:Z[B], c:Z[C], d:Z[D], e:Z[E], f:Z[F], g:Z[G], h:Z[H], i:Z[I], j:Z[J], k:Z[K], l:Z[L], n:Z[N], o:Z[O], p:Z[P]) extends AttributeSeq[(A,B,C,D,E,F,G,H,I,J,K,L,N,O,P)] {
-  def list = List(a,b,c,d,e,f,g,h,i,j,k,l,n,o)
+  def list = List(a,b,c,d,e,f,g,h,i,j,k,l,n,o,p)
   def parse (m: M) = for (av <- a parse m; bv <- b parse m; cv <- c parse m; dv <- d parse m; ev <- e parse m; fv <- f parse m; gv <- g parse m; hv <- h parse m; iv <- i parse m; jv <- j parse m; kv <- k parse m; lv <- l parse m; nv <- n parse m; ov <- o parse m; pv <- p parse m) yield (av,bv,cv,dv,ev,fv,gv,hv,iv,jv,kv,lv,nv,ov,pv)
   def >> [V] (fn: (A,B,C,D,E,F,G,H,I,J,K,L,N,O,P)=>V) = map(fn.tupled)
 }
