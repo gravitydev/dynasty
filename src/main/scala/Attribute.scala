@@ -63,6 +63,7 @@ class Attribute [T:DynamoType](val name: String) extends Attribute1[T] {
   def <=  (v: T) = new Comparison(this, ComparisonOperator.LE, v)
   def >   (v: T) = new Comparison(this, ComparisonOperator.GT, v)
   def >=  (v: T) = new Comparison(this, ComparisonOperator.GE, v)
+  def beginsWith (v: T)(implicit ev: String =:= T) = new Comparison(this, ComparisonOperator.BEGINS_WITH, v)
 
   def between (a: T, b: T) = new BetweenComparison(this, a, b)
 }

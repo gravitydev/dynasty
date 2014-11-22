@@ -51,6 +51,8 @@ object `package` extends StrictLogging {
   private def dynastyType [T,X:DynamoPrimitive](from: X=>T, to: T=>X) = new DynamoPrimitiveMapper(from, to)
 
   def customType [T,X:DynamoMapperSingle](from: X=>T, to: T=>X) = new DynamoCustomMapper(from, to)
+
+  def literal[T](x: T) = new LiteralAttributeParser[T](x)
  
   // built-in mappers
   implicit def intDynamoType    = dynastyType[Int, String]            (_.toInt, _.toString)(NumberT)
@@ -126,6 +128,11 @@ class MappedAttributeSeq [A,B](attr: AttributeParser[A], fn: A=>B) extends Attri
 class OptionalAttributeParser[T](parser: AttributeParser[T]) extends Attribute1[Option[T]] {
   def parse (m: M) = Some(parser.parse(m))
   def list = parser.list
+}
+
+class LiteralAttributeParser[T](t: T) extends Attribute1[T] {
+  def parse (m: M) = Some(t)
+  def list = Nil
 }
 
 class Attribute2 [A,B](a:Z[A], b:Z[B]) extends AttributeSeq[(A,B)] {

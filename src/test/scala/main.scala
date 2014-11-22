@@ -57,7 +57,7 @@ class DynastySpec extends FlatSpec with Matchers {
 
     dyn get (
       tables.UserItem.on("user").select(u => 
-        u.userId ~ u.userId
+        u.userId ~ u.userId ~ literal(24L)
       )
     ) map {x =>
       println(x)

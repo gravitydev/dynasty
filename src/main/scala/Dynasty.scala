@@ -8,7 +8,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import com.typesafe.scalalogging.slf4j.StrictLogging
 
 object Dynasty {
-  def apply (client: AmazonDynamoDBAsyncClient, tablePrefix: String = "")(implicit ec: ExecutionContext) = new Dynasty(client, tablePrefix)
+  def apply (client: AmazonDynamoDBAsyncClient, tablePrefix: String = "")(implicit ec: ExecutionContext): Dynasty = 
+    new Dynasty(client, tablePrefix)
 }
 
 class Dynasty (
