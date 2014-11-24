@@ -103,27 +103,33 @@ class Dynasty (
    * @param request (tableName, Seq(keys), Seq(attributes))
    */
   def batchGet [V](queries: GetQueryMulti[V]*): Future[List[V]] = logging ("Batch getting: " + queries) {
-    val req = new BatchGetItemRequest()
-      .withRequestItems {
-        (queries.filter(_.keys.nonEmpty) map {query =>
-          (tablePrefix+query.tableName) -> 
-            new KeysAndAttributes()
-              .withKeys(query.keys.map(_.asJava).asJava)
-              .withAttributesToGet(query.selector.attributes.map(_.name).distinct.asJava)
-        }).toMap[String,KeysAndAttributes].asJava
-      }
+    val items = 
+      (queries.filter(_.keys.nonEmpty) map {query =>
+        (tablePrefix+query.tableName) -> 
+          new KeysAndAttributes()
+            .withKeys(query.keys.map(_.asJava).asJava)
+            .withAttributesToGet(query.selector.attributes.map(_.name).distinct.asJava)
+      }).toMap[String,KeysAndAttributes].asJava
 
-    logger.debug("BatchGetItem: " + req)
+    if (items.isEmpty) Future.successful(Nil)
+    else {
+      val req = new BatchGetItemRequest()
+        .withRequestItems {
+          items
+        }
 
-    awsToScala(client.batchGetItemAsync)(req) map {r =>
-      r.getResponses.asScala.toList flatMap {case (k,v) => 
-        // find the relevant query
-        var parser = queries.find(tablePrefix + _.tableName == k).get.selector
+      logger.debug("BatchGetItem: " + req)
 
-        // parse the attributes
-        v.asScala map {item =>
-          parser.parse(item.asScala.toMap).getOrElse {
-            sys.error("Error when parsing [" + parser + "] from [" + item.asScala.toMap + "]")
+      awsToScala(client.batchGetItemAsync)(req) map {r =>
+        r.getResponses.asScala.toList flatMap {case (k,v) => 
+          // find the relevant query
+          var parser = queries.find(tablePrefix + _.tableName == k).get.selector
+
+          // parse the attributes
+          v.asScala map {item =>
+            parser.parse(item.asScala.toMap).getOrElse {
+              sys.error("Error when parsing [" + parser + "] from [" + item.asScala.toMap + "]")
+            }
           }
         }
       }
