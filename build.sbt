@@ -3,7 +3,7 @@ name := "dynasty"
 
 organization := "com.gravitydev"
 
-version := "0.1.18-SNAPSHOT"
+version := "0.1.19-simpler-types-SNAPSHOT"
 
 scalaVersion := "2.11.4"
 

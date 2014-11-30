@@ -50,19 +50,28 @@ abstract class DynamoTable [K:DynamoKeyType](val tableName: String) {
 object `package` extends StrictLogging {
   private def dynastyType [T,X:DynamoPrimitive](from: X=>T, to: T=>X) = new DynamoPrimitiveMapper(from, to)
 
-  def customType [T,X:DynamoMapperSingle](from: X=>T, to: T=>X) = new DynamoCustomMapper(from, to)
+  def customType [T,X:DynamoMapper](from: X=>T, to: T=>X) = new DynamoCustomMapper(from, to)
 
   def literal[T](x: T) = new LiteralAttributeParser[T](x)
  
   // built-in mappers
-  implicit def intDynamoType    = dynastyType[Int, String]            (_.toInt, _.toString)(NumberT)
-  implicit def longDynamoType   = dynastyType[Long, String]           (_.toLong, _.toString)(NumberT)
-  implicit def decimalType      = dynastyType[BigDecimal, String]     (BigDecimal.apply, _.toString)(NumberT)
-  implicit def strDynamoType    = dynastyType[String, String]         (x => x, x => x)(StringT)
-  implicit def boolDynamoType   = dynastyType[Boolean, String]        (_ == 1.toString, if (_) 1.toString else 0.toString)(NumberT)
-  implicit def binaryDynamoType = dynastyType[ByteBuffer, ByteBuffer] (x => x, x => x)(BinaryT)
+  implicit def intDynamoType      = dynastyType[Int, String]              (_.toInt, _.toString)(NumberT)
+  implicit def intSetDynamoType   = dynastyType[Set[Int], Set[String]]    (_.map(_.toInt), _.map(_.toString))(NumberSetT)
 
-  implicit def setDynamoType [T](implicit m: DynamoMapperSingle[T]) = new DynamoSetMapper[T]
+  implicit def longDynamoType     = dynastyType[Long, String]             (_.toLong, _.toString)(NumberT)
+  implicit def longSetDynamoType  = dynastyType[Set[Long], Set[String]]   (_.map(_.toLong), _.map(_.toString))(NumberSetT)
+
+  implicit def decimalType        = dynastyType[BigDecimal, String]       (BigDecimal.apply, _.toString)(NumberT)
+  implicit def decimalSetType     = dynastyType[Set[BigDecimal], Set[String]] (_.map(BigDecimal.apply), _.map(_.toString))(NumberSetT)
+
+  implicit def strDynamoType      = dynastyType[String, String]           (x => x, x => x)(StringT)
+  implicit def strSetDynamoType   = dynastyType[Set[String], Set[String]] (x => x, x => x)(StringSetT)
+
+  implicit def binaryDynamoType   = dynastyType[Set[ByteBuffer], Set[ByteBuffer]] (x => x, x => x)(BinarySetT)
+
+  implicit def boolDynamoType     = dynastyType[Boolean, Boolean]         (x=>x, x=>x)(BooleanT)
+
+  //implicit def setDynamoType [T](implicit m: DynamoMapperSingle[T]) = new DynamoSetMapper[T]
 
   private[dynasty] type M = Map[String,AttributeValue]
 
