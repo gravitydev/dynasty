@@ -5,7 +5,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient
 import com.amazonaws.services.dynamodbv2.model._
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
-import com.typesafe.scalalogging.slf4j.StrictLogging
+import com.typesafe.scalalogging.StrictLogging
 
 object Dynasty {
   def apply (client: AmazonDynamoDBAsyncClient, tablePrefix: String = "")(implicit ec: ExecutionContext): Dynasty = 

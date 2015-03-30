@@ -6,7 +6,7 @@ import com.amazonaws.handlers.AsyncHandler
 import com.amazonaws.AmazonWebServiceRequest
 import scala.collection.JavaConversions._
 import java.nio.ByteBuffer
-import com.typesafe.scalalogging.slf4j.StrictLogging
+import com.typesafe.scalalogging.StrictLogging
 import scala.language.implicitConversions
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
@@ -71,7 +71,8 @@ object `package` extends StrictLogging {
 
   implicit def boolDynamoType     = dynastyType[Boolean, Boolean]         (x=>x, x=>x)(BooleanT)
 
-  //implicit def setDynamoType [T](implicit m: DynamoMapperSingle[T]) = new DynamoSetMapper[T]
+  implicit def listDynamoType     = dynastyType[List[AttributeValue], List[AttributeValue]] (x=>x, x=>x)(ListT)
+  implicit def mapDynamoType      = dynastyType[Map[String,AttributeValue], Map[String,AttributeValue]] (x=>x, x=>x)(MapT)
 
   private[dynasty] type M = Map[String,AttributeValue]
 
@@ -226,5 +227,18 @@ class Attribute14 [A,B,C,D,E,F,G,H,I,J,K,L,N,O](a:Z[A], b:Z[B], c:Z[C], d:Z[D], 
 class Attribute15 [A,B,C,D,E,F,G,H,I,J,K,L,N,O,P](a:Z[A], b:Z[B], c:Z[C], d:Z[D], e:Z[E], f:Z[F], g:Z[G], h:Z[H], i:Z[I], j:Z[J], k:Z[K], l:Z[L], n:Z[N], o:Z[O], p:Z[P]) extends AttributeSeq[(A,B,C,D,E,F,G,H,I,J,K,L,N,O,P)] {
   def list = List(a,b,c,d,e,f,g,h,i,j,k,l,n,o,p)
   def parse (m: M) = for (av <- a parse m; bv <- b parse m; cv <- c parse m; dv <- d parse m; ev <- e parse m; fv <- f parse m; gv <- g parse m; hv <- h parse m; iv <- i parse m; jv <- j parse m; kv <- k parse m; lv <- l parse m; nv <- n parse m; ov <- o parse m; pv <- p parse m) yield (av,bv,cv,dv,ev,fv,gv,hv,iv,jv,kv,lv,nv,ov,pv)
+  def ~ [Q] (q: Z[Q]) = new Attribute16(a,b,c,d,e,f,g,h,i,j,k,l,n,o,p,q)
   def >> [V] (fn: (A,B,C,D,E,F,G,H,I,J,K,L,N,O,P)=>V) = map(fn.tupled)
 }
+class Attribute16 [A,B,C,D,E,F,G,H,I,J,K,L,N,O,P,Q](a:Z[A], b:Z[B], c:Z[C], d:Z[D], e:Z[E], f:Z[F], g:Z[G], h:Z[H], i:Z[I], j:Z[J], k:Z[K], l:Z[L], n:Z[N], o:Z[O], p:Z[P], q:Z[Q]) extends AttributeSeq[(A,B,C,D,E,F,G,H,I,J,K,L,N,O,P,Q)] {
+  def list = List(a,b,c,d,e,f,g,h,i,j,k,l,n,o,p,q)
+  def parse (m: M) = for (av <- a parse m; bv <- b parse m; cv <- c parse m; dv <- d parse m; ev <- e parse m; fv <- f parse m; gv <- g parse m; hv <- h parse m; iv <- i parse m; jv <- j parse m; kv <- k parse m; lv <- l parse m; nv <- n parse m; ov <- o parse m; pv <- p parse m; qv <- q parse m) yield (av,bv,cv,dv,ev,fv,gv,hv,iv,jv,kv,lv,nv,ov,pv,qv)
+  def ~ [R] (r: Z[R]) = new Attribute17(a,b,c,d,e,f,g,h,i,j,k,l,n,o,p,q,r)
+  def >> [V] (fn: (A,B,C,D,E,F,G,H,I,J,K,L,N,O,P,Q)=>V) = map(fn.tupled)
+}
+class Attribute17 [A,B,C,D,E,F,G,H,I,J,K,L,N,O,P,Q,R](a:Z[A], b:Z[B], c:Z[C], d:Z[D], e:Z[E], f:Z[F], g:Z[G], h:Z[H], i:Z[I], j:Z[J], k:Z[K], l:Z[L], n:Z[N], o:Z[O], p:Z[P], q:Z[Q], r:Z[R]) extends AttributeSeq[(A,B,C,D,E,F,G,H,I,J,K,L,N,O,P,Q,R)] {
+  def list = List(a,b,c,d,e,f,g,h,i,j,k,l,n,o,p,q,r)
+  def parse (m: M) = for (av <- a parse m; bv <- b parse m; cv <- c parse m; dv <- d parse m; ev <- e parse m; fv <- f parse m; gv <- g parse m; hv <- h parse m; iv <- i parse m; jv <- j parse m; kv <- k parse m; lv <- l parse m; nv <- n parse m; ov <- o parse m; pv <- p parse m; qv <- q parse m; rv <- r parse m) yield (av,bv,cv,dv,ev,fv,gv,hv,iv,jv,kv,lv,nv,ov,pv,qv,rv)
+  def >> [V] (fn: (A,B,C,D,E,F,G,H,I,J,K,L,N,O,P,Q,R)=>V) = map(fn.tupled)
+}
+

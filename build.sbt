@@ -3,19 +3,17 @@ name := "dynasty"
 
 organization := "com.gravitydev"
 
-version := "0.1.19-simpler-types-SNAPSHOT"
+version := "0.2.0-SNAPSHOT"
 
-scalaVersion := "2.11.4"
-
-crossScalaVersions := Seq("2.11.4", "2.10.4")
+scalaVersion := "2.11.6"
 
 libraryDependencies ++= Seq(
-  "com.amazonaws"             % "aws-java-sdk" % "1.9.7",
-  "com.typesafe.scala-logging" %% "scala-logging-slf4j" % "2.1.2",
+  "com.amazonaws"             % "aws-java-sdk" % "1.9.27",
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
   "com.gravitydev" %% "awsutil" % "0.0.2-SNAPSHOT",
   "org.scalatest" % "scalatest_2.10" % "2.0" % "test",
-  "joda-time" % "joda-time" % "2.1" % "test",
-  "org.joda" % "joda-convert" % "1.1" % "test"
+  "joda-time" % "joda-time" % "2.7" % "test",
+  "org.joda" % "joda-convert" % "1.7" % "test"
 )
 
 offline := true
