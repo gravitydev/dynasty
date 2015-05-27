@@ -73,9 +73,8 @@ class Dynasty (
       .withKeyConditions(query.predicate.asJava)
 
     val req2 = query.filter map {x =>
-      req
-        .withQueryFilter(x.conditions.asJava)
-        .withConditionalOperator(x.condOp)
+      val cond = req.withQueryFilter(x.conditions.asJava)
+      if (x.conditions.size > 1) cond.withConditionalOperator(x.condOp) else cond
     } getOrElse req
 
     val req3 = if (query.reverseOrder) req2.withScanIndexForward(false) else req2
@@ -95,6 +94,49 @@ class Dynasty (
         query.selector.parse(item) getOrElse {
           sys.error("Error when parsing [" + query.selector + "] from [" + item + "]")
         }
+      }
+    }
+  }
+
+  def queryPaginated [V](query: QueryReq[V], exclusiveStartKey: Option[Map[String,AttributeValue]] = None): Future[List[V]] = {
+    val req = new QueryRequest()
+      .withTableName(tablePrefix + query.tableName)
+      .withAttributesToGet(query.selector.attributes.map(_.name).distinct.asJava)
+      .withKeyConditions(query.predicate.asJava)
+
+    val req2 = query.filter map {x =>
+      req
+        .withQueryFilter(x.conditions.asJava)
+        .withConditionalOperator(x.condOp)
+    } getOrElse req
+
+    val req3 = if (query.reverseOrder) req2.withScanIndexForward(false) else req2
+
+    val req4 = query.limit map (lim => req3.withLimit(lim)) getOrElse req3
+
+    val req5 = if (query.consistentRead) req4.withConsistentRead(true) else req4
+
+    val req6 = query.indexName map {idx => req5.withIndexName(idx)} getOrElse req5
+
+    val req7 = query.exclusiveStartKey map {key => req6.withExclusiveStartKey(key.asJava)} getOrElse req6
+
+    logger.debug("Query: " + req7.toString)
+
+    awsToScala(client.queryAsync)(req7) flatMap {x =>
+      val res = x.getItems.asScala.toList map {res =>
+        val item = res.asScala.toMap
+      
+        query.selector.parse(item) getOrElse {
+          sys.error("Error when parsing [" + query.selector + "] from [" + item + "]")
+        } 
+      }
+
+      logger.debug("Last evaluated key: " + x)
+      logger.debug("Last evaluated key: " + x.getLastEvaluatedKey)
+      Option(x.getLastEvaluatedKey) map {key =>
+        queryPaginated(query, exclusiveStartKey = Some(key.asScala.toMap)) map {res ++ _}
+      } getOrElse {
+        Future.successful(res)
       }
     }
   }

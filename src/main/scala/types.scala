@@ -75,7 +75,10 @@ case object BinarySetT extends DynamoPrimitive[Set[ByteBuffer]] with DynamoSetPr
 case object BooleanT extends DynamoPrimitive[Boolean] {
   // force check null to be called on java.lang.Boolean
   // Predef.Boolea2boolean causes NPE on null
-  def get (a: AttributeValue): Boolean = checkNull[java.lang.Boolean](a, _.getBOOL)
+  def get (a: AttributeValue): Boolean = {
+    if (a.getBOOL != null) checkNull[java.lang.Boolean](a, _.getBOOL)
+    else checkNull(a, _.getN == "1") // legacy support for bool as int
+  }
 
   def set (a: AttributeValue, v: Boolean): AttributeValue = {a.setBOOL(v); a}
   def onEmpty = None
@@ -115,9 +118,11 @@ object DynamoMapper {
 class DynamoPrimitiveMapper [T,X:DynamoPrimitive](val from: X=>T, val to: T=>X) extends DynamoMapper[T] {
   val t = DynamoPrimitive[X]
   def get (data: Map[String,AttributeValue], name: String): Option[T] = {
-    data.get(name) map {v => 
-      from(t.get(v))
-    } orElse t.onEmpty.map(from) // recover empty (necessary for set types)
+    wrapExceptions(s"Error parsing $name from $data") {
+      data.get(name) map {v => 
+        from(t.get(v))
+      } orElse t.onEmpty.map(from) // recover empty (necessary for set types)
+    }
   }
   def put (value: T): Seq[AttributeValue] = {
     if (t.isEmpty(to(value))) Nil
@@ -126,6 +131,10 @@ class DynamoPrimitiveMapper [T,X:DynamoPrimitive](val from: X=>T, val to: T=>X) 
   def set (value: T): AttributeValueUpdate = {
     if (t.isEmpty(to(value))) new AttributeValueUpdate().withAction(AttributeAction.DELETE)
     else new AttributeValueUpdate().withValue(put(value).head).withAction(AttributeAction.PUT)
+  }
+
+  private def wrapExceptions [A](msg: => String)(fn: => A): A = try fn catch {
+    case e: Exception => throw new Exception(msg, e)
   }
 }
 

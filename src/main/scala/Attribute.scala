@@ -54,8 +54,11 @@ class Attribute [T:DynamoType](val name: String) extends Attribute1[T] {
   } getOrElse new AssignmentTerm(name, Nil, Nil)
   
   override def toString = "Attribute(name="+name+", mapper="+mapper+")"
-  
-  def isAbsent = Seq(name -> new ExpectedAttributeValue().withExists(false))
+ 
+  @deprecated("Use isNull", "0.2.1")
+  def isAbsent = isNull
+
+  def isNull = new UnaryOp(this, ComparisonOperator.NULL) //Seq(name -> new ExpectedAttributeValue().withExists(false))
  
   // comparisons
   def === (v: T) = new ComparisonEquals(this, v)

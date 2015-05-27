@@ -95,7 +95,12 @@ object `package` extends StrictLogging {
   implicit def equalsToExpectation [T](comp: ComparisonEquals[T]) = 
     comp.values map (x => comp.attr.name -> new ExpectedAttributeValue().withValue(x))
 
-  implicit def equalsToCondition [T](comp: ComparisonTerm[T]): SingleConditionExpr = 
+  implicit def unaryOpToExpectation [T](op: UnaryOp[T]): Seq[(String,ExpectedAttributeValue)] = op.op match {
+    case ComparisonOperator.NULL => Seq(op.attr.name -> new ExpectedAttributeValue().withExists(false))
+    case ComparisonOperator.NOT_NULL => Seq(op.attr.name -> new ExpectedAttributeValue().withExists(false))
+  }
+
+  implicit def comparisonToCondition [T](comp: ComparisonTerm[T]): SingleConditionExpr = 
     SingleConditionExpr(
       comp.attr.name, 
       new Condition()

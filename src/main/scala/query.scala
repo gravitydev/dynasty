@@ -26,6 +26,8 @@ class BetweenComparison [T](attribute: Attribute[T], start: T, end: T)
  */
 class ComparisonEquals[T](attribute: Attribute[T], value: T) extends Comparison[T](attribute, ComparisonOperator.EQ, value)
 
+class UnaryOp[T](attribute: Attribute[T], op: ComparisonOperator) extends ComparisonTerm[T](attribute, op, Seq())
+
 sealed abstract class ConditionExpr(val condOp: ConditionalOperator, val conditions: Map[String,Condition])
 
 case class SingleConditionExpr (attrName: String, condition: Condition) 
@@ -69,12 +71,14 @@ case class QueryReq [V](
   limit: Option[Int] = None,
   reverseOrder: Boolean = false,
   consistentRead: Boolean = false,
-  indexName: Option[String] = None
+  indexName: Option[String] = None,
+  exclusiveStartKey: Option[Map[String,AttributeValue]] = None
 ) {
   def reverse = copy(reverseOrder = true)
-  def limit (num: Int) = copy(limit = Some(num))
+  def limit (num: Int): QueryReq[V] = copy(limit = Some(num))
   def consistent = copy(consistentRead = true)
   def consistent(consistentRead: Boolean) = copy(consistentRead = consistentRead)
+  def exclusiveStartKey(key: Map[String,AttributeValue]) = copy(exclusiveStartKey = Some(key))
 }
 
 case class PutQuery [T<:DynamoTable[_]] (

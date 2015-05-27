@@ -3,14 +3,13 @@ name := "dynasty"
 
 organization := "com.gravitydev"
 
-version := "0.2.0-SNAPSHOT"
+version := "0.2.0-SNAPSHOT-paginated3"
 
 scalaVersion := "2.11.6"
 
 libraryDependencies ++= Seq(
-  "com.amazonaws"             % "aws-java-sdk" % "1.9.27",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
-  "com.gravitydev" %% "awsutil" % "0.0.2-SNAPSHOT",
+  "com.gravitydev" %% "awsutil" % "0.0.3-SNAPSHOT",
   "org.scalatest" % "scalatest_2.10" % "2.0" % "test",
   "joda-time" % "joda-time" % "2.7" % "test",
   "org.joda" % "joda-convert" % "1.7" % "test"
