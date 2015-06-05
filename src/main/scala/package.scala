@@ -47,32 +47,38 @@ abstract class DynamoTable [K:DynamoKeyType](val tableName: String) {
   protected def index (name: String): DynamoIndex[this.type] = new DynamoIndex[this.type](name)
 }
 
-object `package` extends StrictLogging {
-  private def dynastyType [T,X:DynamoPrimitive](from: X=>T, to: T=>X) = new DynamoPrimitiveMapper(from, to)
+class DynamoTypeBuilder [T,X] {
+  def apply [U](from: X=>T, to: T=>X)(implicit tpe: DynamoType[X] with DynamoUnderlyingType[U]) = new DynamoWrappedType[T,X,U](from, to)
+}
 
-  def customType [T,X:DynamoMapper](from: X=>T, to: T=>X) = new DynamoCustomMapper(from, to)
+object `package` extends StrictLogging {
+
+  private [dynasty] def wrapExceptions [A](msg: => String)(fn: => A): A = try fn catch {
+    case e: Exception => throw new Exception(msg, e)
+  }
+
+  def customType [T,X] = new DynamoTypeBuilder[T,X]
 
   def literal[T](x: T) = new LiteralAttributeParser[T](x)
  
-  // built-in mappers
-  implicit def intDynamoType      = dynastyType[Int, String]              (_.toInt, _.toString)(NumberT)
-  implicit def intSetDynamoType   = dynastyType[Set[Int], Set[String]]    (_.map(_.toInt), _.map(_.toString))(NumberSetT)
+  // built-in types
+  implicit val decimalType        = NumberT 
+  implicit val decimalSetType     = NumberSetT 
 
-  implicit def longDynamoType     = dynastyType[Long, String]             (_.toLong, _.toString)(NumberT)
-  implicit def longSetDynamoType  = dynastyType[Set[Long], Set[String]]   (_.map(_.toLong), _.map(_.toString))(NumberSetT)
+  implicit val strDynamoType      = StringT 
+  implicit val strSetDynamoType   = StringSetT 
 
-  implicit def decimalType        = dynastyType[BigDecimal, String]       (BigDecimal.apply, _.toString)(NumberT)
-  implicit def decimalSetType     = dynastyType[Set[BigDecimal], Set[String]] (_.map(BigDecimal.apply), _.map(_.toString))(NumberSetT)
+  implicit val binaryDynamoType   = BinaryT
+  implicit val boolDynamoType     = BooleanT 
+  implicit def listDynamoType     = ListT
+  implicit def mapDynamoType      = MapT
 
-  implicit def strDynamoType      = dynastyType[String, String]           (x => x, x => x)(StringT)
-  implicit def strSetDynamoType   = dynastyType[Set[String], Set[String]] (x => x, x => x)(StringSetT)
+  implicit def intDynamoType      = customType[Int, BigDecimal]              (_.toInt, BigDecimal(_))(NumberT)
+  implicit def intSetDynamoType   = customType[Set[Int], Set[BigDecimal]]    (_.map(_.toInt), _.map(BigDecimal(_)))(NumberSetT)
 
-  implicit def binaryDynamoType   = dynastyType[Set[ByteBuffer], Set[ByteBuffer]] (x => x, x => x)(BinarySetT)
+  implicit def longDynamoType     = customType[Long, BigDecimal]             (_.toLong, BigDecimal(_))(NumberT)
+  implicit def longSetDynamoType  = customType[Set[Long], Set[BigDecimal]]   (_.map(_.toLong), _.map(BigDecimal(_)))(NumberSetT)
 
-  implicit def boolDynamoType     = dynastyType[Boolean, Boolean]         (x=>x, x=>x)(BooleanT)
-
-  implicit def listDynamoType     = dynastyType[List[AttributeValue], List[AttributeValue]] (x=>x, x=>x)(ListT)
-  implicit def mapDynamoType      = dynastyType[Map[String,AttributeValue], Map[String,AttributeValue]] (x=>x, x=>x)(MapT)
 
   private[dynasty] type M = Map[String,AttributeValue]
 
@@ -84,10 +90,6 @@ object `package` extends StrictLogging {
   
   implicit def tableToQueryBuilder [K,T<:DynamoTable[K]] (table: T with DynamoTable[K]) = new QueryBuilder(table)
  
-  implicit def fromString (value: String) = new AttributeValue().withS(value)
-  implicit def fromInt (value: Int) = new AttributeValue().withN(value.toString)
-  implicit def fromLong (value: Long) = new AttributeValue().withN(value.toString)
-
   implicit def assignmentToPut (value: AssignmentTerm) = value.name -> value.put
   implicit def assignmentToSet (value: AssignmentTerm) = value.name -> value.set
 

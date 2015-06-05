@@ -5,25 +5,38 @@ import com.amazonaws.services.dynamodbv2.model._
 import java.nio.ByteBuffer
 import scala.collection.JavaConverters._
 
-/** A type (primitive or custom) that can be used with dynamo */
-trait DynamoType [T] {
-  def get (data: Map[String,AttributeValue], name: String): Option[T]
-  def put (value: T): Seq[AttributeValue]
-  def set (value: T): AttributeValueUpdate
-}
-object DynamoType {
-  def apply[X:DynamoType] = implicitly[DynamoType[X]]
-}
+/** 
+ * A native type as supported by dynamo
+ */
+trait DynamoUnderlyingType[U]
 
-sealed trait DynamoPrimitive[T] {
+/**
+ * A type (native or custom) that can be mapped to a DynamoUnderlyingType
+ */
+trait DynamoType[T] {
+  /** Get an actual value from an sdk AttributeValue */
   def get (a: AttributeValue): T
-  def set (a: AttributeValue, v: T): AttributeValue
-  def isEmpty (v: T): Boolean = v match {
-    case v: Set[_] => v.isEmpty
-    case v: String => v.isEmpty
-    case _ => false
-  }
 
+  /** Set an actual value on an sdk AttributeValue */
+  def set (a: AttributeValue, value: T): AttributeValue
+
+  /** Get optionally extract a value by name from an sdk map of values */
+  def extract (data: Map[String,AttributeValue], name: String): Option[T]
+
+  /** Prepare a value for a PUT operation */
+  def put (value: T): Seq[AttributeValue]
+
+  /** Prepare a value for an UPDATE operation */
+
+  /** Prepare a value for a SET operation (i.e. set a value, a set, or delete an empty set) */
+  def update (value: T): AttributeValueUpdate
+}
+object DynamoType { 
+  @inline def apply [T] (implicit t: DynamoType[T]) = t
+}
+
+sealed trait DynamoNativeType [T] extends DynamoType[T] with DynamoUnderlyingType[T] {
+  /** What to return when optionally selecting an empty value */
   def onEmpty: Option[T]
 
   /** Provide a slightly more informative error message */
@@ -32,47 +45,75 @@ sealed trait DynamoPrimitive[T] {
     if (res == null) sys.error("Null found when reading attribute: " + a)
     res
   }
+
+  def extract (data: Map[String,AttributeValue], name: String): Option[T] = wrapExceptions(s"Error parsing $name from $data") {
+    data.get(name) map {get _} orElse onEmpty // recover empty (necessary for set types)
+  }
 }
-object DynamoPrimitive {
-  def apply[X:DynamoPrimitive] = implicitly[DynamoPrimitive[X]]
+object DynamoNativeType {
+  def apply[X:DynamoNativeType] = implicitly[DynamoNativeType[X]]
 }
 
 /** Marker trait, useful for mappers to handle empty sets */
-sealed trait DynamoSetPrimitive [T]{self: DynamoPrimitive[Set[T]] =>
+sealed trait DynamoSetNativeType [T]{self: DynamoNativeType[Set[T]] =>
   def onEmpty = Some(Set.empty[T])
 }
 
 // built-in raw types
-case object NumberT extends DynamoPrimitive[String] {
-  def get (a: AttributeValue): String = checkNull(a, _.getN)
-  def set (a: AttributeValue, v: String): AttributeValue = {a.setN(v); a}
+case object NumberT extends DynamoNativeType[BigDecimal] {
+  def get (a: AttributeValue): BigDecimal = BigDecimal(checkNull(a, _.getN))
+  def set (a: AttributeValue, v: BigDecimal): AttributeValue = {a.setN(v.toString); a}
+  def put (value: BigDecimal): Seq[AttributeValue] = Seq(set(new AttributeValue(), value))
+  def update (value: BigDecimal): AttributeValueUpdate = new AttributeValueUpdate().withValue(put(value).head).withAction(AttributeAction.PUT)
   def onEmpty = None
 }
-case object NumberSetT extends DynamoPrimitive[Set[String]] with DynamoSetPrimitive[String] {
-  def get (a: AttributeValue): Set[String] = checkNull(a, _.getNS).asScala.toSet
-  def set (a: AttributeValue, v: Set[String]): AttributeValue = {a.setNS(v.asJava); a}
+case object NumberSetT extends DynamoNativeType[Set[BigDecimal]] with DynamoSetNativeType[BigDecimal] {
+  def get (a: AttributeValue): Set[BigDecimal] = checkNull(a, _.getNS).asScala.toSet.map((x: String) => BigDecimal(x))
+  def set (a: AttributeValue, v: Set[BigDecimal]): AttributeValue = {a.setNS(v.map(_.toString).asJava); a}
+  def put (value: Set[BigDecimal]): Seq[AttributeValue] = if (value.isEmpty) Nil else Seq(set(new AttributeValue(), value))
+  def update (value: Set[BigDecimal]): AttributeValueUpdate = {
+    if (value.isEmpty) new AttributeValueUpdate().withAction(AttributeAction.DELETE)
+    else new AttributeValueUpdate().withValue(put(value).head).withAction(AttributeAction.PUT)
+  }
 }
-case object StringT extends DynamoPrimitive[String] {
+case object StringT extends DynamoNativeType[String] {
   def get (a: AttributeValue): String = checkNull(a, _.getS)
   def set (a: AttributeValue, v: String): AttributeValue = {a.setS(v); a}
+  def put (value: String): Seq[AttributeValue] = if (value.isEmpty) Nil else Seq(set(new AttributeValue(), value))
+  def update (value: String): AttributeValueUpdate = {
+    if (value.isEmpty) new AttributeValueUpdate().withAction(AttributeAction.DELETE)
+    else new AttributeValueUpdate().withValue(put(value).head).withAction(AttributeAction.PUT)
+  }
   def onEmpty = None
 }
-case object StringSetT extends DynamoPrimitive[Set[String]] with DynamoSetPrimitive[String] {
+case object StringSetT extends DynamoNativeType[Set[String]] with DynamoSetNativeType[String] {
   def get (a: AttributeValue): Set[String] = checkNull(a, _.getSS).asScala.toSet
   def set (a: AttributeValue, v: Set[String]): AttributeValue = {a.setSS(v.asJava); a}
+  def put (value: Set[String]): Seq[AttributeValue] = if (value.isEmpty) Nil else Seq(set(new AttributeValue(), value))
+  def update (value: Set[String]): AttributeValueUpdate = {
+    if (value.isEmpty) new AttributeValueUpdate().withAction(AttributeAction.DELETE)
+    else new AttributeValueUpdate().withValue(put(value).head).withAction(AttributeAction.PUT)
+  }
 }
 
-case object BinaryT extends DynamoPrimitive[ByteBuffer] {
+case object BinaryT extends DynamoNativeType[ByteBuffer] {
   def get (a: AttributeValue): ByteBuffer = checkNull(a, _.getB)
   def set (a: AttributeValue, v: ByteBuffer): AttributeValue = {a.setB(v); a}
+  def put (value: ByteBuffer): Seq[AttributeValue] = Seq(set(new AttributeValue(), value))
+  def update (value: ByteBuffer): AttributeValueUpdate = new AttributeValueUpdate().withValue(put(value).head).withAction(AttributeAction.PUT)
   def onEmpty = None
 }
-case object BinarySetT extends DynamoPrimitive[Set[ByteBuffer]] with DynamoSetPrimitive[ByteBuffer] {
+case object BinarySetT extends DynamoNativeType[Set[ByteBuffer]] with DynamoSetNativeType[ByteBuffer] {
   def get (a: AttributeValue): Set[ByteBuffer] = checkNull(a, _.getBS).asScala.toSet
   def set (a: AttributeValue, v: Set[ByteBuffer]): AttributeValue = {a.setBS(v.asJava); a}
+  def put (value: Set[ByteBuffer]): Seq[AttributeValue] = if (value.isEmpty) Nil else Seq(set(new AttributeValue(), value))
+  def update (value: Set[ByteBuffer]): AttributeValueUpdate = {
+    if (value.isEmpty) new AttributeValueUpdate().withAction(AttributeAction.DELETE)
+    else new AttributeValueUpdate().withValue(put(value).head).withAction(AttributeAction.PUT)
+  }
 }
 
-case object BooleanT extends DynamoPrimitive[Boolean] {
+case object BooleanT extends DynamoNativeType[Boolean] with DynamoUnderlyingType[Boolean] {
   // force check null to be called on java.lang.Boolean
   // Predef.Boolea2boolean causes NPE on null
   def get (a: AttributeValue): Boolean = {
@@ -81,67 +122,42 @@ case object BooleanT extends DynamoPrimitive[Boolean] {
   }
 
   def set (a: AttributeValue, v: Boolean): AttributeValue = {a.setBOOL(v); a}
+  def put (value: Boolean): Seq[AttributeValue] = Seq(set(new AttributeValue(), value))
+  def update (value: Boolean): AttributeValueUpdate = new AttributeValueUpdate().withValue(put(value).head).withAction(AttributeAction.PUT)
   def onEmpty = None
 }
 
-case object ListT extends DynamoPrimitive[List[AttributeValue]] {
+case object ListT extends DynamoNativeType[List[AttributeValue]] {
   def get (a: AttributeValue): List[AttributeValue] = checkNull(a, _.getL).asScala.toList
   def set (a: AttributeValue, v: List[AttributeValue]): AttributeValue = {
     a.setL(v.asJava)
     a
   }
+  def put (value: List[AttributeValue]): Seq[AttributeValue] = Seq(set(new AttributeValue(), value))
+  def update (value: List[AttributeValue]): AttributeValueUpdate = new AttributeValueUpdate().withValue(put(value).head).withAction(AttributeAction.PUT)
   def onEmpty = Some(Nil)
 }
 
-case object MapT extends DynamoPrimitive[Map[String,AttributeValue]] {
+case object MapT extends DynamoNativeType[Map[String,AttributeValue]] {
   def get (a: AttributeValue): Map[String,AttributeValue] = checkNull(a, _.getM).asScala.toMap
   def set (a: AttributeValue, v: Map[String,AttributeValue]): AttributeValue = {
     a.setM(v.asJava)
     a
   }
+  def put (value: Map[String,AttributeValue]): Seq[AttributeValue] = Seq(set(new AttributeValue(), value))
+  def update (value: Map[String,AttributeValue]): AttributeValueUpdate = new AttributeValueUpdate().withValue(put(value).head).withAction(AttributeAction.PUT)
   def onEmpty = Some(Map())
 }
 
-/**
- * Maps a type to the dynamo API
- */
-sealed trait DynamoMapper [T] extends DynamoType[T] {
-  def get (data: Map[String,AttributeValue], name: String): Option[T]
-  def put (value: T): Seq[AttributeValue]
-  def set (value: T): AttributeValueUpdate
-}
-object DynamoMapper {
-  def apply[T:DynamoMapper] = implicitly[DynamoMapper[T]] 
-}
-
-/** Maps a type to a primitive */
-class DynamoPrimitiveMapper [T,X:DynamoPrimitive](val from: X=>T, val to: T=>X) extends DynamoMapper[T] {
-  val t = DynamoPrimitive[X]
-  def get (data: Map[String,AttributeValue], name: String): Option[T] = {
-    wrapExceptions(s"Error parsing $name from $data") {
-      data.get(name) map {v => 
-        from(t.get(v))
-      } orElse t.onEmpty.map(from) // recover empty (necessary for set types)
-    }
-  }
-  def put (value: T): Seq[AttributeValue] = {
-    if (t.isEmpty(to(value))) Nil
-    else Seq(DynamoPrimitive[X].set(new AttributeValue(), to(value)))
-  }
-  def set (value: T): AttributeValueUpdate = {
-    if (t.isEmpty(to(value))) new AttributeValueUpdate().withAction(AttributeAction.DELETE)
-    else new AttributeValueUpdate().withValue(put(value).head).withAction(AttributeAction.PUT)
-  }
-
-  private def wrapExceptions [A](msg: => String)(fn: => A): A = try fn catch {
-    case e: Exception => throw new Exception(msg, e)
-  }
-}
-
-/** Maps a type to another type (custom to custom) */
-class DynamoCustomMapper [T,X:DynamoMapper](val from: X=>T, val to: T=>X) extends DynamoMapper[T] {
-  def get (data: Map[String,AttributeValue], name: String): Option[T] = DynamoType[X].get(data, name) map from
-  def put (value: T): Seq[AttributeValue] = DynamoType[X].put(to(value))
-  def set (value: T): AttributeValueUpdate = DynamoType[X].set(to(value)) 
+/** Maps a type to another type (custom to (custom|native)) */
+class DynamoWrappedType [T,X:DynamoType,U](
+  val from: X=>T, 
+  val to: T=>X
+)(implicit tpe: DynamoType[X] with DynamoUnderlyingType[U]) extends DynamoType[T] with DynamoUnderlyingType[U] {
+  def get(a: AttributeValue): T = from(tpe.get(a))
+  def extract (data: Map[String,AttributeValue], name: String): Option[T] = tpe.extract(data, name) map from
+  def set (a: AttributeValue, value: T): AttributeValue = tpe.set(a, to(value)) 
+  def put (value: T): Seq[AttributeValue] = tpe.put(to(value))
+  def update (value: T): AttributeValueUpdate = tpe.update(to(value)) 
 }
 

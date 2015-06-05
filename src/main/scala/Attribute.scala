@@ -18,7 +18,7 @@ class Attribute [T:DynamoType](val name: String) extends Attribute1[T] {
 
   override def attributes = List(this)
   
-  def parse (m: Map[String,AttributeValue]): Option[T] = mapper.get(m, name)
+  def parse (m: Map[String,AttributeValue]): Option[T] = mapper.extract(m, name)
   
   def += [X](value: X)(implicit ev: Set[X] =:= T) = name -> Seq(new AttributeValueUpdate()
     .withAction(AttributeAction.ADD)
@@ -47,10 +47,10 @@ class Attribute [T:DynamoType](val name: String) extends Attribute1[T] {
   }
     
   // produce an assignment, let the implicit conversion create an update or a value
-  def := (value: T) = new AssignmentTerm(name, mapper.put(value), Seq(mapper.set(value)))
+  def := (value: T) = new AssignmentTerm(name, mapper.put(value), Seq(mapper.update(value)))
 
   def :? (value: Option[T]) = value map {v =>
-    new AssignmentTerm(name, mapper.put(v), Seq(mapper.set(v)))
+    new AssignmentTerm(name, mapper.put(v), Seq(mapper.update(v)))
   } getOrElse new AssignmentTerm(name, Nil, Nil)
   
   override def toString = "Attribute(name="+name+", mapper="+mapper+")"
@@ -66,7 +66,9 @@ class Attribute [T:DynamoType](val name: String) extends Attribute1[T] {
   def <=  (v: T) = new Comparison(this, ComparisonOperator.LE, v)
   def >   (v: T) = new Comparison(this, ComparisonOperator.GT, v)
   def >=  (v: T) = new Comparison(this, ComparisonOperator.GE, v)
-  def beginsWith (v: T)(implicit ev: String =:= T) = new Comparison(this, ComparisonOperator.BEGINS_WITH, v)
+
+  // TODO: AWS: only works with String or Binary
+  def beginsWith (v: T) = new Comparison(this, ComparisonOperator.BEGINS_WITH, v)
 
   def between (a: T, b: T) = new BetweenComparison(this, a, b)
 }
