@@ -15,11 +15,16 @@ final class AssignmentTerm (val name: String, val put: Seq[AttributeValue], val 
  */
 sealed abstract class ComparisonTerm [T](val attr: Attribute[T], val op: ComparisonOperator, val values: Seq[AttributeValue])
 
+/** Binary expression on 2 values of the same type */
 class Comparison[T](attribute: Attribute[T], op: ComparisonOperator, value: T)
   extends ComparisonTerm [T](attribute, op, attribute.mapper.put(value))
 
 class BetweenComparison [T](attribute: Attribute[T], start: T, end: T)
   extends ComparisonTerm [T](attribute, ComparisonOperator.BETWEEN, attribute.mapper.put(start) ++ attribute.mapper.put(end))
+
+/** Binary expression on 2 values of possibly different types */
+class UnderlyingComparison[T,U](attribute: Attribute[T], op: ComparisonOperator, value: U)(implicit underlyingTpe: DynamoType[U] with DynamoUnderlyingType[U])
+  extends ComparisonTerm [T](attribute, op, underlyingTpe.put(value))
 
 /**
  * Separate type for equals to implicit conversion to an expectation only in the case of equals comparison 

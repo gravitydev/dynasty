@@ -9,6 +9,9 @@ import scala.collection.JavaConverters._
  * A native type as supported by dynamo
  */
 trait DynamoUnderlyingType[U]
+object DynamoUnderlyingType {
+  def apply [T](implicit tpe: DynamoUnderlyingType[T]) = tpe
+}
 
 /**
  * A type (native or custom) that can be mapped to a DynamoUnderlyingType

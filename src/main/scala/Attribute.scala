@@ -45,6 +45,8 @@ class Attribute [T:DynamoType](val name: String) extends Attribute1[T] {
       .withAction(AttributeAction.ADD)
       .withValue(mapper.put(ev(value)).head))
   }
+
+  def delete = name -> Seq(name -> new AttributeValueUpdate().withAction(AttributeAction.DELETE))
     
   // produce an assignment, let the implicit conversion create an update or a value
   def := (value: T) = new AssignmentTerm(name, mapper.put(value), Seq(mapper.update(value)))
@@ -68,7 +70,7 @@ class Attribute [T:DynamoType](val name: String) extends Attribute1[T] {
   def >=  (v: T) = new Comparison(this, ComparisonOperator.GE, v)
 
   // TODO: AWS: only works with String or Binary
-  def beginsWith (v: T) = new Comparison(this, ComparisonOperator.BEGINS_WITH, v)
+  def beginsWith [U](v: U)(implicit ev: DynamoType[U] with DynamoUnderlyingType[U]) = new UnderlyingComparison(this, ComparisonOperator.BEGINS_WITH, v)
 
   def between (a: T, b: T) = new BetweenComparison(this, a, b)
 }
