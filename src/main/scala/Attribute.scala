@@ -46,7 +46,7 @@ class Attribute [T:DynamoType](val name: String) extends Attribute1[T] {
       .withValue(mapper.put(ev(value)).head))
   }
 
-  def delete = name -> Seq(name -> new AttributeValueUpdate().withAction(AttributeAction.DELETE))
+  def delete = name -> Seq(new AttributeValueUpdate().withAction(AttributeAction.DELETE))
     
   // produce an assignment, let the implicit conversion create an update or a value
   def := (value: T) = new AssignmentTerm(name, mapper.put(value), Seq(mapper.update(value)))
