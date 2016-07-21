@@ -3,14 +3,14 @@ name := "dynasty"
 
 organization := "com.gravitydev"
 
-version := "0.2.0-SNAPSHOT-underlying-type4"
+version := "0.2.0-SNAPSHOT-underlying-type9"
 
-scalaVersion := "2.11.6"
+scalaVersion := "2.11.7"
 
 libraryDependencies ++= Seq(
   "com.typesafe.scala-logging" %% "scala-logging" % "3.1.0",
-  "com.gravitydev" %% "awsutil" % "0.0.4-SNAPSHOT",
-  "org.scalatest" %% "scalatest" % "2.2.4" % "test",
+  "com.gravitydev" %% "awsutil" % "0.0.5-SNAPSHOT",
+  "org.scalatest" %% "scalatest" % "2.2.5" % "test",
   "joda-time" % "joda-time" % "2.8" % "test",
   "org.joda" % "joda-convert" % "1.7" % "test"
 )

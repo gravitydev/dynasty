@@ -123,7 +123,7 @@ trait AttributeParser [T] {
   def attributes: List[Attribute[_]]
   def parse (m: M): Option[T]
   def map [X](fn: T=>X) = new MappedAttributeSeq(this, fn)
-  def ? = new OptionalAttributeParser(this)
+  def ? : AttributeParser[Option[T]] = new OptionalAttributeParser(this)
 }
 
 trait AttributeSeq [T] extends AttributeParser [T] {
@@ -246,6 +246,12 @@ class Attribute16 [A,B,C,D,E,F,G,H,I,J,K,L,N,O,P,Q](a:Z[A], b:Z[B], c:Z[C], d:Z[
 class Attribute17 [A,B,C,D,E,F,G,H,I,J,K,L,N,O,P,Q,R](a:Z[A], b:Z[B], c:Z[C], d:Z[D], e:Z[E], f:Z[F], g:Z[G], h:Z[H], i:Z[I], j:Z[J], k:Z[K], l:Z[L], n:Z[N], o:Z[O], p:Z[P], q:Z[Q], r:Z[R]) extends AttributeSeq[(A,B,C,D,E,F,G,H,I,J,K,L,N,O,P,Q,R)] {
   def list = List(a,b,c,d,e,f,g,h,i,j,k,l,n,o,p,q,r)
   def parse (m: M) = for (av <- a parse m; bv <- b parse m; cv <- c parse m; dv <- d parse m; ev <- e parse m; fv <- f parse m; gv <- g parse m; hv <- h parse m; iv <- i parse m; jv <- j parse m; kv <- k parse m; lv <- l parse m; nv <- n parse m; ov <- o parse m; pv <- p parse m; qv <- q parse m; rv <- r parse m) yield (av,bv,cv,dv,ev,fv,gv,hv,iv,jv,kv,lv,nv,ov,pv,qv,rv)
+  def ~ [S] (s: Z[S]) = new Attribute18(a,b,c,d,e,f,g,h,i,j,k,l,n,o,p,q,r,s)
   def >> [V] (fn: (A,B,C,D,E,F,G,H,I,J,K,L,N,O,P,Q,R)=>V) = map(fn.tupled)
 }
 
+class Attribute18 [A,B,C,D,E,F,G,H,I,J,K,L,N,O,P,Q,R,S](a:Z[A], b:Z[B], c:Z[C], d:Z[D], e:Z[E], f:Z[F], g:Z[G], h:Z[H], i:Z[I], j:Z[J], k:Z[K], l:Z[L], n:Z[N], o:Z[O], p:Z[P], q:Z[Q], r:Z[R], s:Z[S]) extends AttributeSeq[(A,B,C,D,E,F,G,H,I,J,K,L,N,O,P,Q,R,S)] {
+  def list = List(a,b,c,d,e,f,g,h,i,j,k,l,n,o,p,q,r,s)
+  def parse (m: M) = for (av <- a parse m; bv <- b parse m; cv <- c parse m; dv <- d parse m; ev <- e parse m; fv <- f parse m; gv <- g parse m; hv <- h parse m; iv <- i parse m; jv <- j parse m; kv <- k parse m; lv <- l parse m; nv <- n parse m; ov <- o parse m; pv <- p parse m; qv <- q parse m; rv <- r parse m; sv <- s parse m) yield (av,bv,cv,dv,ev,fv,gv,hv,iv,jv,kv,lv,nv,ov,pv,qv,rv,sv)
+  def >> [V] (fn: (A,B,C,D,E,F,G,H,I,J,K,L,N,O,P,Q,R,S)=>V) = map(fn.tupled)
+}

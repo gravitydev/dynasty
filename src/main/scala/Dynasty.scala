@@ -95,10 +95,12 @@ class Dynasty (
           sys.error("Error when parsing [" + query.selector + "] from [" + item + "]")
         }
       }
+    } recover { // in the case of exception, include query info
+      case ex => throw new Exception(s"Error when executing query: $req6", ex)
     }
   }
 
-  def queryPaginated [V](query: QueryReq[V], exclusiveStartKey: Option[Map[String,AttributeValue]] = None): Future[List[V]] = {
+  def queryPaginated [V](query: QueryReq[V]): Future[List[V]] = {
     val req = new QueryRequest()
       .withTableName(tablePrefix + query.tableName)
       .withAttributesToGet(query.selector.attributes.map(_.name).distinct.asJava)
@@ -134,7 +136,16 @@ class Dynasty (
       logger.debug("Last evaluated key: " + x)
       logger.debug("Last evaluated key: " + x.getLastEvaluatedKey)
       Option(x.getLastEvaluatedKey) map {key =>
-        queryPaginated(query, exclusiveStartKey = Some(key.asScala.toMap)) map {res ++ _}
+        query.limit map {lim => 
+          val newLimit = lim-res.size
+          if (newLimit > 0) {
+            queryPaginated(query.exclusiveStartKey(key.asScala.toMap).limit(lim-res.size)) map {res ++ _}
+          } else {
+            Future.successful(res)
+          } 
+        } getOrElse {
+          queryPaginated(query.exclusiveStartKey(key.asScala.toMap)) map {res ++ _}
+        }
       } getOrElse {
         Future.successful(res)
       }
@@ -162,7 +173,7 @@ class Dynasty (
 
       logger.debug("BatchGetItem: " + req)
 
-      awsToScala(client.batchGetItemAsync)(req) map {r =>
+      awsToScala[BatchGetItemRequest,BatchGetItemResult](client.batchGetItemAsync)(req) map {r =>
         r.getResponses.asScala.toList flatMap {case (k,v) => 
           // find the relevant query
           var parser = queries.find(tablePrefix + _.tableName == k).get.selector
