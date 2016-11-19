@@ -7,7 +7,7 @@ import data.dynamo._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class DynastySpec extends FlatSpec with Matchers {
-  
+  /* 
   "Basic parsers" should "work" in {
     val data = Map[String,AttributeValue]()
 
@@ -103,6 +103,44 @@ class DynastySpec extends FlatSpec with Matchers {
         .set(_.userId := "25")
         .expecting(_.userId === "24")
     )
+  }
+  */
+  
+  "Reactive" should "work" in {
+    import akka.actor.ActorSystem
+    import akka.stream._
+    import akka.stream.scaladsl._
+    import scala.concurrent.Await
+    import scala.concurrent.duration._
+
+    import com.amazonaws.auth.BasicAWSCredentials
+ 
+    lazy val awsCreds = new BasicAWSCredentials(
+      "AKIAINNA6VEIEZBEACZQ",
+      "5T3rSyFDD6+/kLy4WhwupymFt0jHxqEOFG0dwMsf"
+    )
+    
+    lazy val dynamoClient = {
+      val d = new AmazonDynamoDBAsyncClient(awsCreds)
+      //d.setEndpoint(config.getString("dynamodb.endpoint").get)
+      d
+    }
+
+    val publisher = new DynamoScanPublisher (
+      dynamoClient,
+      new ScanRequest()
+        .withTableName("equipment-stats-2")
+        .withLimit(10)
+    )
+
+    implicit val system = ActorSystem("stuff")
+    implicit val materializer = ActorMaterializer()
+ 
+    val source = Source.fromPublisher(publisher)
+      .throttle(1, 1.second, 1, ThrottleMode.shaping)
+      .runForeach(println)
+
+    println(Await.result(source, 20.seconds))
   }
   
 }

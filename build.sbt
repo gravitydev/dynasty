@@ -12,12 +12,17 @@ libraryDependencies ++= Seq(
   "com.gravitydev" %% "awsutil" % "0.0.5-SNAPSHOT",
   "org.scalatest" %% "scalatest" % "2.2.5" % "test",
   "joda-time" % "joda-time" % "2.8" % "test",
-  "org.joda" % "joda-convert" % "1.7" % "test"
+  "org.joda" % "joda-convert" % "1.7" % "test",
+  "com.typesafe.akka" % "akka-stream_2.11" % "2.4.8",
+  "ch.qos.logback" % "logback-classic" % "1.1.7" % "test"
+
 )
 
 offline := true
 
 resolvers += "gravitydev" at "https://devstack.io/repo/gravitydev/public"
+
+parallelExecution in Test := false
 
 publishTo := Some("gravitydev" at "https://devstack.io/repo/gravitydev/public")
 
