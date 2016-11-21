@@ -11,7 +11,6 @@ import scala.language.implicitConversions
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
 import scala.collection.JavaConversions._
-import com.gravitydev.dynasty.QueryBuilder
 
 sealed abstract class DynamoKeyType[T]
 class HashKeyType[H] extends DynamoKeyType[H]
@@ -42,7 +41,7 @@ class DynamoIndex[+T<:DynamoTable[_]](val name: String)
 abstract class DynamoTable [K:DynamoKeyType](val tableName: String) {
   def key: DynamoKey[K]
 
-  protected def attr [T] (name: String)(implicit att: DynamoType[T]) = new ItemAttribute [T](name) 
+  protected def attr [T] (name: String)(implicit att: DynamoType[T]): ItemAttribute[T] = new ItemAttribute [T](name) 
 
   protected def index (name: String): DynamoIndex[this.type] = new DynamoIndex[this.type](name)
 }
@@ -126,7 +125,7 @@ trait AttributeParser [T] {
   def attributes: List[ItemAttribute[_]]
   def parse (m: M): Option[T]
   def map [X](fn: T=>X) = new MappedAttributeSeq(this, fn)
-  def ? : AttributeParser[Option[T]] = new OptionalAttributeParser(this)
+  def ? : OptionalAttributeParser[T] = new OptionalAttributeParser(this)
 }
 
 trait AttributeSeq [T] extends AttributeParser [T] {
