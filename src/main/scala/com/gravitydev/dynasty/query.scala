@@ -3,51 +3,6 @@ package com.gravitydev.dynasty
 import com.amazonaws.services.dynamodbv2.model._
 import scala.collection.JavaConverters._
 
-/**
- * Intermediate structure representing a generic assignment
- * Implicit conversions will then turn it into the specific type required based on the context (put, set, etc)
- */
-final class AssignmentTerm (val name: String, val put: Seq[AttributeValue], val set: Seq[AttributeValueUpdate])
-
-/**
- * Intermediate structure representing a generic comparison
- * Implicit conversions will then turn it into the specific type required based on the context (expectation, condition, etc)
- */
-sealed abstract class ComparisonTerm [T](val attr: Attribute[T], val op: ComparisonOperator, val values: Seq[AttributeValue])
-
-/** Binary expression on 2 values of the same type */
-class Comparison[T](attribute: Attribute[T], op: ComparisonOperator, value: T)
-  extends ComparisonTerm [T](attribute, op, attribute.mapper.put(value))
-
-class BetweenComparison [T](attribute: Attribute[T], start: T, end: T)
-  extends ComparisonTerm [T](attribute, ComparisonOperator.BETWEEN, attribute.mapper.put(start) ++ attribute.mapper.put(end))
-
-/** Binary expression on 2 values of possibly different types */
-class UnderlyingComparison[T,U](attribute: Attribute[T], op: ComparisonOperator, value: U)(implicit underlyingTpe: DynamoType[U] with DynamoUnderlyingType[U])
-  extends ComparisonTerm [T](attribute, op, underlyingTpe.put(value))
-
-/**
- * Separate type for equals to implicit conversion to an expectation only in the case of equals comparison 
- */
-class ComparisonEquals[T](attribute: Attribute[T], value: T) extends Comparison[T](attribute, ComparisonOperator.EQ, value)
-
-class UnaryOp[T](attribute: Attribute[T], op: ComparisonOperator) extends ComparisonTerm[T](attribute, op, Seq())
-
-sealed abstract class ConditionExpr(val condOp: ConditionalOperator, val conditions: Map[String,Condition])
-
-case class SingleConditionExpr (attrName: String, condition: Condition) 
-    extends ConditionExpr(ConditionalOperator.AND, Map(attrName -> condition)) {
-  def && (that: SingleConditionExpr) = AndConditionExpr( Map( attrName -> condition, that.attrName -> that.condition ) )
-  def || (that: SingleConditionExpr) = OrConditionExpr( Map( attrName -> condition, that.attrName -> that.condition ) )
-}
-
-case class AndConditionExpr (conds: Map[String,Condition]) extends ConditionExpr(ConditionalOperator.AND, conds) {
-  def && (that: SingleConditionExpr) = copy(conds = conds + (that.attrName -> that.condition))
-}
-case class OrConditionExpr (conds: Map[String,Condition]) extends ConditionExpr(ConditionalOperator.OR, conds) {
-  def || (that: SingleConditionExpr) = copy(conds = conds + (that.attrName -> that.condition))
-}
-
 final case class GetQuery [V] (
   tableName: String,
   key: Map[String, AttributeValue],
@@ -65,14 +20,18 @@ final case class GetQueryMulti [V](
 
 case class ScanQuery [V] (
   tableName: String,
-  selector: AttributeSeq[V]
+  selector: AttributeSeq[V],
+  limit: Option[Int] = None,
+  consistentRead: Boolean = false,
+  indexName: Option[String] = None,
+  exclusiveStartKey: Option[Map[String,AttributeValue]] = None
 )
 
 case class QueryReq [V](
   tableName: String,
   predicate: Map[String,Condition],
   selector: AttributeSeq[V],
-  filter: Option[ConditionExpr],
+  filter: Option[ast.ConditionExpr],
   limit: Option[Int] = None,
   reverseOrder: Boolean = false,
   consistentRead: Boolean = false,
@@ -111,6 +70,7 @@ final case class DeleteQuery (
   tableName: String,
   key: Map[String, AttributeValue] 
 )
+
 object DeleteQuery {
   implicit def fromQueryBuilderWithKeys(v: QueryBuilder.WithKey[_,_]) = DeleteQuery(v.table.tableName, v.keys)
 }
@@ -137,7 +97,7 @@ class QueryBuilder [K,T<:DynamoTable[K]](table: T with DynamoTable[K], _index: O
 
   def index (indexFn: T => DynamoIndex[T]) = new QueryBuilder(table, _index = Some(indexFn(table)))
 
-  def where (conditions: T => SingleConditionExpr*): QueryBuilder.WithPredicate[K,T] = new QueryBuilder.WithPredicate(
+  def where (conditions: T => ast.SingleConditionExpr*): QueryBuilder.WithPredicate[K,T] = new QueryBuilder.WithPredicate(
     table, 
     conditions map {cond => 
       val x = cond(table)
@@ -190,10 +150,10 @@ object QueryBuilder {
     table: T, 
     predicate: Map[String,Condition], 
     _index: Option[DynamoIndex[T]],
-    filter: Option[ConditionExpr] = None
+    filter: Option[ast.ConditionExpr] = None
   ) {
     /** Build 'query' request */
-    def filter (filterFn: T => ConditionExpr) = new QueryBuilder.WithPredicate[K,T](table, predicate, _index, Some(filterFn(table)))
+    def filter (filterFn: T => ast.ConditionExpr) = new QueryBuilder.WithPredicate[K,T](table, predicate, _index, Some(filterFn(table)))
 
     def index (indexFn: T => DynamoIndex[T]) = new WithPredicate[K,T](table, predicate, _index = Some(indexFn(table)), filter)
 
@@ -206,4 +166,3 @@ object QueryBuilder {
     ) 
   }
 }
-

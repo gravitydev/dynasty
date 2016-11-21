@@ -11,7 +11,7 @@ import scala.language.implicitConversions
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
 import scala.collection.JavaConversions._
-
+import com.gravitydev.dynasty.QueryBuilder
 
 sealed abstract class DynamoKeyType[T]
 class HashKeyType[H] extends DynamoKeyType[H]
@@ -22,11 +22,11 @@ sealed trait DynamoKey[T] {
   def in (v: Set[T]): Seq[Map[String,AttributeValue]]
 }
 
-class HashKey[H] (h: Attribute[H]) extends DynamoKey[H] {
+class HashKey[H] (h: ItemAttribute[H]) extends DynamoKey[H] {
   def === (v: H) = Map(h.name -> h.mapper.put(v).head)
   def in (v: Set[H]) = v.map(x => Map(h.name -> h.mapper.put(x).head)).toSeq
 }
-class HashAndRangeKey[H,R] (h: Attribute[H], r: Attribute[R]) extends DynamoKey[(H,R)] {
+class HashAndRangeKey[H,R] (h: ItemAttribute[H], r: ItemAttribute[R]) extends DynamoKey[(H,R)] {
   def === (v: (H,R)) = Map(h.name -> h.mapper.put(v._1).head, r.name -> r.mapper.put(v._2).head)
   def in (v: Set[(H,R)]) = v.map(x => Map(h.name -> h.mapper.put(x._1).head, r.name -> r.mapper.put(x._2).head)).toSeq
 }
@@ -42,7 +42,7 @@ class DynamoIndex[+T<:DynamoTable[_]](val name: String)
 abstract class DynamoTable [K:DynamoKeyType](val tableName: String) {
   def key: DynamoKey[K]
 
-  protected def attr [T] (name: String)(implicit att: DynamoType[T]) = new Attribute [T](name) 
+  protected def attr [T] (name: String)(implicit att: DynamoType[T]) = new ItemAttribute [T](name) 
 
   protected def index (name: String): DynamoIndex[this.type] = new DynamoIndex[this.type](name)
 }
@@ -62,6 +62,7 @@ object `package` extends StrictLogging {
   def literal[T](x: T) = new LiteralAttributeParser[T](x)
  
   // built-in types
+  /*
   implicit val decimalType        = NumberT 
   implicit val decimalSetType     = NumberSetT 
 
@@ -72,38 +73,40 @@ object `package` extends StrictLogging {
   implicit val boolDynamoType     = BooleanT 
   implicit def listDynamoType     = ListT
   implicit def mapDynamoType      = MapT
+  */
 
-  implicit def intDynamoType      = customType[Int, BigDecimal]              (_.toInt, BigDecimal(_))(NumberT)
-  implicit def intSetDynamoType   = customType[Set[Int], Set[BigDecimal]]    (_.map(_.toInt), _.map(BigDecimal(_)))(NumberSetT)
+  implicit def intDynamoType      = customType[Int, BigDecimal]              (_.toInt, BigDecimal(_))//(NumberT)
+  implicit def intSetDynamoType   = customType[Set[Int], Set[BigDecimal]]    (_.map(_.toInt), _.map(BigDecimal(_)))//(NumberSetT)
 
-  implicit def longDynamoType     = customType[Long, BigDecimal]             (_.toLong, BigDecimal(_))(NumberT)
-  implicit def longSetDynamoType  = customType[Set[Long], Set[BigDecimal]]   (_.map(_.toLong), _.map(BigDecimal(_)))(NumberSetT)
+  implicit def longDynamoType     = customType[Long, BigDecimal]             (_.toLong, BigDecimal(_))//(NumberT)
+  implicit def longSetDynamoType  = customType[Set[Long], Set[BigDecimal]]   (_.map(_.toLong), _.map(BigDecimal(_)))//(NumberSetT)
 
 
   private[dynasty] type M = Map[String,AttributeValue]
 
   // key
-  implicit def attrToKey[H](h: Attribute[H]): DynamoKey[H] = new HashKey(h)
-  implicit def attrToKey2[H,R](hr: (Attribute[H], Attribute[R])): DynamoKey[(H,R)] = new HashAndRangeKey(hr._1, hr._2)
+  implicit def attrToKey[H](h: ItemAttribute[H]): DynamoKey[H] = new HashKey(h)
+  implicit def attrToKey2[H,R](hr: (ItemAttribute[H], ItemAttribute[R])): DynamoKey[(H,R)] = new HashAndRangeKey(hr._1, hr._2)
 
   private [dynasty] def logging [T](tag: String)(f: Future[T]) = f //recover {case e => logger.error(tag + ": Request error", e); throw e}
   
   implicit def tableToQueryBuilder [K,T<:DynamoTable[K]] (table: T with DynamoTable[K]) = new QueryBuilder(table)
  
-  implicit def assignmentToPut (value: AssignmentTerm) = value.name -> value.put
-  implicit def assignmentToSet (value: AssignmentTerm) = value.name -> value.set
+  implicit def assignmentToPut (value: ast.AssignmentTerm) = value.name -> value.put
+  implicit def assignmentToSet (value: ast.AssignmentTerm) = value.name -> value.set
 
   // TODO: Are expectations deprecated? 
-  implicit def equalsToExpectation [T](comp: ComparisonEquals[T]) = 
+  implicit def equalsToExpectation [T](comp: ast.ComparisonEquals[T]) = 
     comp.values map (x => comp.attr.name -> new ExpectedAttributeValue().withValue(x))
 
-  implicit def unaryOpToExpectation [T](op: UnaryOp[T]): Seq[(String,ExpectedAttributeValue)] = op.op match {
+  implicit def unaryOpToExpectation [T](op: ast.UnaryOp[T]): Seq[(String,ExpectedAttributeValue)] = op.op match {
     case ComparisonOperator.NULL => Seq(op.attr.name -> new ExpectedAttributeValue().withExists(false))
     case ComparisonOperator.NOT_NULL => Seq(op.attr.name -> new ExpectedAttributeValue().withExists(false))
+    case op => sys.error(s"Not a unary op: $op")
   }
 
-  implicit def comparisonToCondition [T](comp: ComparisonTerm[T]): SingleConditionExpr = 
-    SingleConditionExpr(
+  implicit def comparisonToCondition [T](comp: ast.ComparisonTerm[T]): ast.SingleConditionExpr = 
+    ast.SingleConditionExpr(
       comp.attr.name, 
       new Condition()
         .withComparisonOperator(comp.op)
@@ -120,14 +123,14 @@ object `package` extends StrictLogging {
 
 trait AttributeParser [T] {
   def list: List[AttributeParser[_]]
-  def attributes: List[Attribute[_]]
+  def attributes: List[ItemAttribute[_]]
   def parse (m: M): Option[T]
   def map [X](fn: T=>X) = new MappedAttributeSeq(this, fn)
   def ? : AttributeParser[Option[T]] = new OptionalAttributeParser(this)
 }
 
 trait AttributeSeq [T] extends AttributeParser [T] {
-  def attributes = list.foldLeft(List[Attribute[_]]())(_ ++ _.attributes)
+  def attributes = list.foldLeft(List[ItemAttribute[_]]())(_ ++ _.attributes)
   def parse (m: M): Option[T]
   override def toString = getClass.getName.toString + "(" + list.toString + ")"
 }

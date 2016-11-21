@@ -95,7 +95,7 @@ class DynastySpec extends FlatSpec with Matchers {
           _.userId := "User",
           _.userId :? None
         )
-        .expecting(_.userId.isAbsent, _.userId.isAbsent)
+        .expecting(_.userId.isNull, _.userId.isNull)
     )
 
     dyn.update (

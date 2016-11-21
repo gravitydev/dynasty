@@ -1,17 +1,10 @@
 package com.gravitydev.dynasty
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBAsyncClient
 import com.amazonaws.services.dynamodbv2.model._
-import com.amazonaws.handlers.AsyncHandler
-import com.amazonaws.AmazonWebServiceRequest
 import scala.collection.JavaConversions._
-import java.nio.ByteBuffer
-import scala.concurrent.Future
-import org.slf4j.LoggerFactory
 import scala.language.implicitConversions
-import scala.concurrent.{future, promise, Future, Promise}
 
-class Attribute [T:DynamoType](val name: String) extends Attribute1[T] {
+class ItemAttribute [T:DynamoType](val name: String) extends Attribute1[T] {
   val mapper = implicitly[DynamoType[T]]
 
   def list = List(this)
@@ -49,29 +42,28 @@ class Attribute [T:DynamoType](val name: String) extends Attribute1[T] {
   def delete = name -> Seq(new AttributeValueUpdate().withAction(AttributeAction.DELETE))
     
   // produce an assignment, let the implicit conversion create an update or a value
-  def := (value: T) = new AssignmentTerm(name, mapper.put(value), Seq(mapper.update(value)))
+  def := (value: T) = new ast.AssignmentTerm(name, mapper.put(value), Seq(mapper.update(value)))
 
   def :? (value: Option[T]) = value map {v =>
-    new AssignmentTerm(name, mapper.put(v), Seq(mapper.update(v)))
-  } getOrElse new AssignmentTerm(name, Nil, Nil)
+    new ast.AssignmentTerm(name, mapper.put(v), Seq(mapper.update(v)))
+  } getOrElse new ast.AssignmentTerm(name, Nil, Nil)
   
   override def toString = "Attribute(name="+name+", mapper="+mapper+")"
  
   @deprecated("Use isNull", "0.2.1")
   def isAbsent = isNull
 
-  def isNull = new UnaryOp(this, ComparisonOperator.NULL) //Seq(name -> new ExpectedAttributeValue().withExists(false))
+  def isNull = new ast.UnaryOp(this, ComparisonOperator.NULL) //Seq(name -> new ExpectedAttributeValue().withExists(false))
  
   // comparisons
-  def === (v: T) = new ComparisonEquals(this, v)
-  def <   (v: T) = new Comparison(this, ComparisonOperator.LT, v)
-  def <=  (v: T) = new Comparison(this, ComparisonOperator.LE, v)
-  def >   (v: T) = new Comparison(this, ComparisonOperator.GT, v)
-  def >=  (v: T) = new Comparison(this, ComparisonOperator.GE, v)
+  def === (v: T) = new ast.ComparisonEquals(this, v)
+  def <   (v: T) = new ast.Comparison(this, ComparisonOperator.LT, v)
+  def <=  (v: T) = new ast.Comparison(this, ComparisonOperator.LE, v)
+  def >   (v: T) = new ast.Comparison(this, ComparisonOperator.GT, v)
+  def >=  (v: T) = new ast.Comparison(this, ComparisonOperator.GE, v)
 
   // TODO: AWS: only works with String or Binary
-  def beginsWith [U](v: U)(implicit ev: DynamoType[U] with DynamoUnderlyingType[U]) = new UnderlyingComparison(this, ComparisonOperator.BEGINS_WITH, v)
+  def beginsWith [U](v: U)(implicit ev: DynamoType[U] with DynamoUnderlyingType[U]) = new ast.UnderlyingComparison(this, ComparisonOperator.BEGINS_WITH, v)
 
-  def between (a: T, b: T) = new BetweenComparison(this, a, b)
+  def between (a: T, b: T) = new ast.BetweenComparison(this, a, b)
 }
-
